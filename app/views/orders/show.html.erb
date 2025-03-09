@@ -1,0 +1,14 @@
+<div class="order-details">
+  <h3>Order Details</h3>
+  <p><strong>Member:</strong> <%= @order.member.name %></p>
+  
+  <h4>Items Ordered:</h4>
+  <% @order.order_items.each do |order_item| %>
+    <div class="order-item">
+      <p><strong>Item:</strong> <%= order_item.item.display_name %></p>
+      <p><strong>Quantity:</strong> <%= order_item.quantity %></p>
+      <p><strong>Measurement:</strong> <%= order_item.measurement_value %> 
+        <%= order_item.item.measurements['meters'] ? 'meters' : 'liters' %></p>
+    </div>
+  <% end %>
+</div> 

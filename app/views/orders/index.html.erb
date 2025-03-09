@@ -1,0 +1,159 @@
+<body class="hold-transition skin-blue sidebar-mini">
+  <div class="wrapper">
+    <%= render 'layouts/header' %>
+    <div class="content-wrapper">
+      <section class="content-header">
+        <h1>
+          Dashboard
+          <small>Control panel</small>
+        </h1>
+        <ol class="breadcrumb">
+          <li class="active">
+            <a href="#">
+              <i class="fa fa-home"></i>
+              Home Page</a>
+          </li>
+        </ol>
+      </section>
+      <%= hidden_field_tag "order[company_id]", nil, id: "company_id_value" %>
+      <section class="content">
+        <div class="row">
+          <div class="col-md-6">
+            <div class="box">
+              <div class="box-header with-border">
+                <h3 class="box-title">Orders Over Time</h3>
+                <select id="orderFilter" class="form-control" style="width: 200px; display: inline-block; margin-left: 15px;">
+                  <option value="day">Per Day</option>
+                  <option value="week">Per Week</option>
+                  <option value="month">Per Month</option>
+                </select>
+              </div>
+              <div class="box-body">
+                <canvas id="ordersOverTimeChart"></canvas>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="box">
+              <div class="box-header with-border">
+                <h3 class="box-title">Category-wise Orders</h3>
+              </div>
+              <div class="box-body">
+                <canvas id="categoryOrdersChart"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-md-12">
+            <div class="box">
+              <div class="box-header with-border">
+                <h3 class="box-title">Orders Table</h3>
+              </div>
+              <div class="box-body">
+                <table class="table table-bordered table-hover">
+                  <thead>
+                    <tr>
+                      <th>Description</th>
+                      <th>Purchased By</th>
+                      <th>Company</th>
+                      <th>Date</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <% @orders.each do |order| %>
+                    <tr>
+                      <td>
+                        <% order.order_items.each do |order_item| %>
+                          <div>
+                            <%= order_item.item.display_name %> - 
+                            <%= order_item.quantity %> pieces,
+                            <%= order_item.measurement_value %> <%= order_item.item.measurements['meters'] ? 'meters' : 'liters' %>
+                          </div>
+                        <% end %>
+                      </td>
+                      <td><%= order.member.name %></td>
+                      <td><%= order.order_items.first&.item&.company&.name || 'N/A' %></td>
+                      <td><%= order.created_at.strftime("%B %d, %Y") %></td>
+                    </tr>
+                    <% end %>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+    <%= render 'layouts/footer' %>
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function() {
+        let orderCtx = document.getElementById("ordersOverTimeChart").getContext("2d");
+        let categoryCtx = document.getElementById("categoryOrdersChart").getContext("2d");
+        let filter = document.getElementById("orderFilter");
+        
+        function fetchChartData(timeframe) {
+          fetch(`/api/orders_chart_data?timeframe=${timeframe}`)
+            .then(response => response.json())
+            .then(data => {
+              ordersChart.data = data;
+              ordersChart.update();
+            });
+        }
+        
+        let ordersChart = new Chart(orderCtx, {
+          type: "bar",
+          data: {
+            labels: [],
+            datasets: []
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              legend: { display: true },
+              tooltip: { enabled: true }
+            },
+            scales: {
+              y: { beginAtZero: true }
+            }
+          }
+        });
+        
+        function fetchCategoryOrdersChartData() {
+          fetch("/api/category_orders_chart_data")
+            .then(response => response.json())
+            .then(data => {
+              categoryOrdersChart.data = data;
+              categoryOrdersChart.update();
+            });
+        }
+        
+        let categoryOrdersChart = new Chart(categoryCtx, {
+          type: "bar",
+          data: {
+            labels: [],
+            datasets: []
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              legend: { display: true },
+              tooltip: { enabled: true }
+            },
+            scales: {
+              y: { beginAtZero: true }
+            }
+          }
+        });
+        
+        fetchChartData("day");
+        fetchCategoryOrdersChartData();
+        
+        filter.addEventListener("change", function() {
+          fetchChartData(this.value);
+        });
+      });
+    </script>
+  </body>

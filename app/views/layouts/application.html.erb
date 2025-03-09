@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title><%= content_for(:title) || "Om Sakthi Hydraulics Inventory Management" %></title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+
+    <%= yield :head %>
+
+    <link rel="manifest" href="/manifest.json">
+    <link rel="icon" href="/icon.png" type="image/png">
+    <link rel="icon" href="/icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/icon.png">
+    <%= stylesheet_link_tag "application", "data-turbo-track": "reload" %>
+    <%= javascript_importmap_tags %>
+    <%= stylesheet_link_tag    'application', media: 'all' %>
+    <%= javascript_include_tag 'application'%>
+    <%= stylesheet_link_tag "toastr.css" %>
+    <%= stylesheet_link_tag "AdminLTE.min.css" %>
+    <%= stylesheet_link_tag "admin-lte-all-skins.min.css" %>
+    <%= stylesheet_link_tag "blue.css" %>
+    <%= stylesheet_link_tag "dataTables.bootstrap.css" %>
+    <%= stylesheet_link_tag "datepicker3.css" %>
+
+    <%= stylesheet_link_tag "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.5.0/css/font-awesome.min.css" %>
+    <%= stylesheet_link_tag "https://cdnjs.cloudflare.com/ajax/libs/ionicons/2.0.1/css/ionicons.min.css" %>
+    <%= javascript_include_tag "https://code.jquery.com/ui/1.11.4/jquery-ui.min.js"%>
+    <%= javascript_include_tag "toastr.min.js" %>
+    <%= javascript_include_tag "bootstrap3-wysihtml5.all.min.js"%>
+    <%= javascript_include_tag "jquery.dataTables.min.js"%>
+    <%= javascript_include_tag "dataTables.bootstrap.min.js"%>
+    <%= javascript_include_tag "jquery.slimscroll.min.js"%>
+    <%= javascript_include_tag "fastclick.js"%>
+    <%= javascript_include_tag "admin-lte-app.min.js"%>
+    <%= javascript_include_tag "icheck.min.js"%>
+    <%= javascript_include_tag "bootstrap-datepicker.js"%>
+
+    <!-- Select2 -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    
+    <!-- AdminLTE and dependencies -->
+    <%= stylesheet_link_tag "application" %>
+    <%= stylesheet_link_tag "https://cdnjs.cloudflare.com/ajax/libs/admin-lte/2.4.18/css/AdminLTE.min.css" %>
+    <%= stylesheet_link_tag "https://cdnjs.cloudflare.com/ajax/libs/admin-lte/2.4.18/css/skins/_all-skins.min.css" %>
+    
+    <!-- Font Awesome and Ionicons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/ionicons/2.0.1/css/ionicons.min.css">
+
+    <!-- JavaScript dependencies -->
+    <%= javascript_include_tag "application" %>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/admin-lte/2.4.18/js/adminlte.min.js"></script>
+
+    <!-- Initialize AdminLTE -->
+    <script>
+      $(document).ready(function() {
+        if ($.fn.select2) {
+          $('.select2').select2();
+        }
+        
+        if (typeof $.AdminLTE !== 'undefined' && typeof $.AdminLTE.layout !== 'undefined') {
+          $.AdminLTE.layout.fix();
+        }
+      });
+    </script>
+  </head>
+
+  <body class="hold-transition skin-blue sidebar-mini">
+    <%= render 'layouts/notifications' %>
+    <%= yield %>
+
+    <%# <script type="text/javascript">
+        document.addEventListener("DOMContentLoaded", function () {
+        let dropdown = document.getElementById("company_id");
+
+        // Set default value from localStorage if available
+        let savedCompanyId = localStorage.getItem("company_id") || 1;
+        if (savedCompanyId) {
+            dropdown.value = savedCompanyId;
+        } else {
+            // Set a default value if none exists
+            localStorage.setItem("company_id", dropdown.value);
+        }
+
+        // Update localStorage when user selects a new company
+        dropdown.addEventListener("change", function () {
+            localStorage.setItem("company_id", this.value);
+        });
+    });
+    </script> %>
+  </body>
+</html>

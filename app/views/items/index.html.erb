@@ -1,0 +1,237 @@
+<body class="hold-transition skin-blue sidebar-mini">
+  <div class="wrapper">
+    <%= render 'layouts/header' %>
+    <div class="content-wrapper">
+      <section class="content-header">
+        <h1>Inventory Stock Details</h1>
+      </section>
+
+      <section class="content">
+        <div class="row">
+          <div class="col-xs-12">
+            <div class="box">
+              <div class="box-header with-border">
+                <h3 class="box-title">Current Stock Status</h3>
+                <% if @company.present? %>
+                  <p class="text-muted">Showing inventory for <%= @company.name %></p>
+                <% end %>
+                <div class="box-tools">
+                  <div class="form-inline">
+                    <div class="form-group mr-2">
+                      <label class="mr-2">Category: </label>
+                      <select class="form-control" id="category_filter">
+                        <option value="">All Categories</option>
+                        <% Category.order(:name).each do |category| %>
+                          <option value="<%= category.id %>"><%= category.name %></option>
+                        <% end %>
+                      </select>
+                    </div>
+                    <div class="form-group">
+                      <label class="mr-2">Subcategory: </label>
+                      <select class="form-control" id="subcategory_filter" disabled>
+                        <option value="">All Subcategories</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="box-body">
+                <% @items_by_category.each do |category, items| %>
+                  <div class="category-section">
+                    <h4><%= category.name %></h4>
+                    <div class="table-responsive">
+                      <table class="table table-bordered table-striped">
+                        <thead>
+                          <tr>
+                            <th>Item</th>
+                            <th>Subcategory</th>
+                            <th>Total Quantity</th>
+                            <th>Available Quantity</th>
+                            <th>Measurements</th>
+                            <th>Stock Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <% items.each do |item| %>
+                            <tr data-category-id="<%= item.category_id %>" 
+                                data-subcategory-id="<%= item.sub_category_id %>"
+                                class="<%= item.stock_status %>">
+                              <td><%= item.name %></td>
+                              <td><%= item.sub_category&.name %></td>
+                              <td><%= item.quantity %></td>
+                              <td><%= item.remaining_quantity %></td>
+                              <td>
+                                <% item.measurements.each do |key, value| %>
+                                  <%= "#{value} #{key}" %><br>
+                                <% end %>
+                              </td>
+                              <td>
+                                <% case item.stock_status %>
+                                <% when :low_stock %>
+                                  <span class="label label-danger">Low Stock</span>
+                                <% when :average_stock %>
+                                  <span class="label label-warning">Average Stock</span>
+                                <% else %>
+                                  <span class="label label-success">In Stock</span>
+                                <% end %>
+                              </td>
+                            </tr>
+                          <% end %>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                <% end %>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+    <%= render 'layouts/footer' %>
+  </div>
+  
+  <style>
+    .category-section {
+      margin-bottom: 30px;
+    }
+    .category-section h4 {
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #eee;
+    }
+    tr.low_stock {
+      background-color: #fff3f3 !important;
+    }
+    tr.average_stock {
+      background-color: #fff8e1 !important;
+    }
+    tr.in_stock {
+      background-color: #f1f8e9 !important;
+    }
+    .label {
+      font-size: 90%;
+    }
+    .box-tools {
+      float: right;
+      margin-top: -5px;
+    }
+    .form-inline {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+    .form-group {
+      display: flex;
+      align-items: center;
+    }
+    .mr-2 {
+      margin-right: 10px;
+    }
+  </style>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      // Initialize chart only if the canvas exists
+      const chartCanvas = document.getElementById("categoryPerformanceChart");
+      if (chartCanvas) {
+        let ctx = chartCanvas.getContext("2d");
+        let categoryData = {
+          labels: <%= @categories.map(&:name).to_json.html_safe %>,
+          datasets: [{
+            label: "Category Availability",
+            data: <%= @category_percentages.to_json.html_safe %>,
+            backgroundColor: ["#ff6384", "#36a2eb", "#ffce56", "#4bc0c0", "#9966ff"],
+            hoverOffset: 4
+          }]
+        };
+        new Chart(ctx, {
+          type: "pie",
+          data: categoryData,
+          options: {
+            responsive: true,
+            animation: {
+              animateScale: true
+            }
+          }
+        });
+      }
+
+      let dropdown = document.getElementById("company_id");
+      let savedCompanyId = localStorage.getItem("company_id");
+      if (savedCompanyId) {
+        dropdown.value = savedCompanyId;
+      } else {
+        localStorage.setItem("company_id", dropdown.value);
+      }
+      dropdown.addEventListener("change", function () {
+        let selectedCompanyId = this.value;
+        localStorage.setItem("company_id", selectedCompanyId);
+        let currentUrl = new URL(window.location.href);
+        currentUrl.searchParams.set("company_id", selectedCompanyId);
+        window.location.href = currentUrl.toString();
+      });
+
+      const categoryFilter = document.getElementById('category_filter');
+      const subcategoryFilter = document.getElementById('subcategory_filter');
+      
+      // Handle category filter change
+      categoryFilter.addEventListener('change', function() {
+        // Reset subcategory filter
+        subcategoryFilter.innerHTML = '<option value="">All Subcategories</option>';
+        subcategoryFilter.disabled = !this.value;
+        
+        if (this.value) {
+          // Fetch subcategories for selected category
+          fetch(`/api/items/subcategories_by_category?category_id=${this.value}`)
+            .then(response => response.json())
+            .then(data => {
+              data.forEach(subcategory => {
+                const option = document.createElement('option');
+                option.value = subcategory.id;
+                option.textContent = subcategory.name;
+                subcategoryFilter.appendChild(option);
+              });
+            });
+        }
+        
+        filterItems();
+      });
+      
+      // Handle subcategory filter change
+      subcategoryFilter.addEventListener('change', filterItems);
+      
+      function filterItems() {
+        const selectedCategory = categoryFilter.value;
+        const selectedSubcategory = subcategoryFilter.value;
+        
+        // Filter category sections
+        document.querySelectorAll('.category-section').forEach(section => {
+          const categoryName = section.querySelector('h4').textContent;
+          const categoryId = categories.find(c => c.name === categoryName)?.id.toString();
+          
+          if (!selectedCategory || categoryId === selectedCategory) {
+            section.style.display = '';
+            
+            // Filter rows within this category
+            section.querySelectorAll('tbody tr').forEach(row => {
+              const subcategoryId = row.dataset.subcategoryId;
+              if (!selectedSubcategory || subcategoryId === selectedSubcategory) {
+                row.style.display = '';
+              } else {
+                row.style.display = 'none';
+              }
+            });
+          } else {
+            section.style.display = 'none';
+          }
+        });
+      }
+
+      // Add category data for filtering
+      const categories = <%= raw Category.order(:name).map { |c| { id: c.id, name: c.name } }.to_json %>;
+    });
+  </script>
+</body>

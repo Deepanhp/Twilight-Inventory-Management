@@ -1,0 +1,447 @@
+<body class="hold-transition skin-blue sidebar-mini">
+  <div class="wrapper">
+    <%= render 'layouts/header' %>
+    <div class="content-wrapper">
+      <section class="content-header">
+        <h1>Create New Order</h1>
+      </section>
+
+      <section class="content">
+        <div class="row">
+          <div class="col-md-12">
+            <div class="box box-header">
+              <div class="box-header with-border">
+                <h3 class="box-title">Order Details</h3>
+                <div class="box-tools">
+                  <div class="form-inline">
+                    <label class="mr-2">Filter by: </label>
+                    <select class="form-control" id="subcategory_filter">
+                      <option value="">All Subcategories</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+              
+              <%= form_for @order do |f| %>
+                <% if @order.errors.any? %>
+                  <div id="error_explanation" class="alert alert-danger">
+                    <h4>Please fix the following errors:</h4>
+                    <ul>
+                      <% @order.errors.full_messages.each do |message| %>
+                        <li><%= message %></li>
+                      <% end %>
+                    </ul>
+                  </div>
+                <% end %>
+              
+                <div class="box-body">
+                  <div class="form-group">
+                    <label>Buyer</label>
+                    <%= f.select(:member, [['Select a Buyer', '']] + Member.all.pluck(:name, :id), {}, { class: 'form-control', id: 'member_select' }) %>
+                  </div>
+
+                  <div class="table-responsive">
+                    <table class="table table-bordered table-striped" id="order_table">
+                      <thead>
+                        <tr>
+                          <th>Category</th>
+                          <th>Subcategory</th>
+                          <th>Item</th>
+                          <th>Available Stock</th>
+                          <th>Order Details</th>
+                          <th>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody id="order_items_body">
+                      </tbody>
+                      <tfoot>
+                        <tr>
+                          <td colspan="7">
+                            <button type="button" class="btn btn-success" id="add_row_button">
+                              <i class="fa fa-plus"></i> Add New Row
+                            </button>
+                          </td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                </div>
+              
+                <div class="box-footer">
+                  <button type="button" id="order_button" class="btn btn-primary">Place Order</button>
+                </div>
+              <% end %>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+    
+    <script>
+      document.addEventListener("DOMContentLoaded", function() {
+        const addRowButton = document.getElementById('add_row_button');
+        const orderButton = document.getElementById('order_button');
+        const orderItemsBody = document.getElementById('order_items_body');
+        
+        function createNewRow() {
+          const newRow = document.createElement('tr');
+          newRow.innerHTML = `
+            <td>
+              <select class="form-control category-select">
+                <option value="">Select Category</option>
+                <%= Category.all.map { |c| "<option value='#{c.id}'>#{c.name}</option>" }.join.html_safe %>
+              </select>
+            </td>
+            <td>
+              <select class="form-control subcategory-select">
+                <option value="">Select Subcategory</option>
+              </select>
+            </td>
+            <td>
+              <select class="form-control item-select">
+                <option value="">Select Item</option>
+              </select>
+            </td>
+            <td>
+              <div class="stock-info">
+                <div class="pieces">Available pieces: <span class="available-stock">-</span></div>
+                <div class="measurement-info">Length per piece: <span class="measurement">-</span></div>
+              </div>
+            </td>
+            <td>
+              <div class="order-inputs">
+                <div class="form-group">
+                  <label>Number of pieces to order</label>
+                  <input type="number" class="form-control quantity-input" disabled>
+                </div>
+                <div class="form-group">
+                  <label>How many meters to cut from each piece?</label>
+                  <div class="input-group">
+                    <input type="number" class="form-control measurement-value" style="width: 70%" placeholder="Enter value" min="0" step="0.1">
+                    <div class="input-group-append" style="width: 30%">
+                      <select class="form-control measurement-unit" style="width: 100%; border-left: 0;">
+                        <option value="">-</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </td>
+            <td>
+              <button type="button" class="btn btn-danger btn-sm remove-row">
+                <i class="fa fa-trash"></i>
+              </button>
+            </td>
+          `;
+          
+          setupRowEventListeners(newRow);
+          orderItemsBody.appendChild(newRow);
+        }
+
+        function setupRowEventListeners(row) {
+          const categorySelect = row.querySelector('.category-select');
+          const subcategorySelect = row.querySelector('.subcategory-select');
+          const itemSelect = row.querySelector('.item-select');
+          const quantityInput = row.querySelector('.quantity-input');
+          const measurementValue = row.querySelector('.measurement-value');
+          const measurementUnit = row.querySelector('.measurement-unit');
+          const removeButton = row.querySelector('.remove-row');
+          
+          categorySelect.addEventListener('change', function() {
+            const headerCompanySelect = document.querySelector('#company_id');
+            const subcategoryFilter = document.getElementById('subcategory_filter');
+            
+            // Reset filter
+            subcategoryFilter.innerHTML = '<option value="">All Subcategories</option>';
+            
+            if (!headerCompanySelect?.value) {
+              alert('Please select a company first');
+              this.value = '';
+              measurementUnit.innerHTML = '<option value="">-</option>';
+              return;
+            }
+
+            subcategorySelect.innerHTML = '<option value="">Select Subcategory</option>';
+            itemSelect.innerHTML = '<option value="">Select Item</option>';
+            row.querySelector('.available-stock').textContent = '-';
+            row.querySelector('.measurement').textContent = '-';
+            
+            if (!this.value) {
+              measurementUnit.innerHTML = '<option value="">-</option>';
+              return;
+            }
+            
+            // Get the selected category's measurement type
+            const selectedCategory = <%= raw Category.all.to_json(only: [:id, :measurement_types]) %>.find(
+              c => c.id === parseInt(this.value)
+            );
+            
+            // Update measurement units based on category type
+            if (selectedCategory) {
+              const measurementType = selectedCategory.measurement_types[0];
+              if (measurementType === 'volume') {
+                measurementUnit.innerHTML = `
+                  <option value="liters">L</option>
+                  <option value="milliliters">ml</option>
+                `;
+              } else if (measurementType === 'length') {
+                measurementUnit.innerHTML = `
+                  <option value="meters">m</option>
+                  <option value="centimeters">cm</option>
+                  <option value="millimeters">mm</option>
+                  <option value="feet">ft</option>
+                  <option value="inches">in</option>
+                `;
+              }
+            }
+            
+            subcategorySelect.disabled = !this.value;
+            itemSelect.disabled = true;
+            quantityInput.disabled = true;
+            measurementValue.disabled = true;
+            measurementValue.value = '';
+            
+            if (this.value) {
+              fetch(`/api/items/subcategories_by_category?category_id=${this.value}&company_id=${headerCompanySelect.value}`)
+                .then(response => response.json())
+                .then(data => {
+                  data.forEach(subcategory => {
+                    const option = document.createElement('option');
+                    option.value = subcategory.id;
+                    option.textContent = subcategory.name;
+                    subcategorySelect.appendChild(option);
+                    
+                    // Add to filter dropdown
+                    const filterOption = option.cloneNode(true);
+                    subcategoryFilter.appendChild(filterOption);
+                  });
+                });
+            }
+          });
+
+          subcategorySelect.addEventListener('change', function() {
+            const headerCompanySelect = document.querySelector('#company_id');
+            
+            itemSelect.innerHTML = '<option value="">Select Item</option>';
+            row.querySelector('.available-stock').textContent = '-';
+            row.querySelector('.measurement').textContent = '-';
+            
+            itemSelect.disabled = !this.value;
+            quantityInput.disabled = true;
+            measurementValue.disabled = true;
+            measurementValue.value = '';
+            
+            if (this.value) {
+              fetch(`/api/items/items_by_subcategory?subcategory_id=${this.value}&company_id=${headerCompanySelect.value}`)
+                .then(response => response.json())
+                .then(data => {
+                  data.forEach(item => {
+                    const option = document.createElement('option');
+                    option.value = item.id;
+                    option.textContent = item.name;
+                    option.dataset.stock = item.quantity;
+                    option.dataset.measurement = item.measurement;
+                    option.dataset.measurementValue = item.measurement_value;
+                    option.dataset.measurementType = item.measurement_type;
+                    itemSelect.appendChild(option);
+                  });
+                });
+            }
+          });
+
+          itemSelect.addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            
+            if (!selectedOption.value) {
+              row.querySelector('.available-stock').textContent = '-';
+              row.querySelector('.measurement').textContent = '-';
+              quantityInput.disabled = true;
+              measurementValue.disabled = true;
+              quantityInput.value = '';
+              measurementValue.value = '';
+              return;
+            }
+
+            const stock = selectedOption.dataset.stock;
+            const measurement = selectedOption.dataset.measurement;
+            const measurementValue = selectedOption.dataset.measurementValue;
+            
+            row.querySelector('.available-stock').textContent = stock;
+            row.querySelector('.measurement').textContent = `${measurementValue} ${measurement}`;
+            
+            quantityInput.disabled = false;
+            measurementValue.disabled = false;
+          });
+
+          quantityInput.addEventListener('change', function() {
+            const max = parseFloat(this.max);
+            let value = parseFloat(this.value);
+            
+            if (value > max) {
+              alert(`Cannot order more than available amount (${max} ${measurementUnit.textContent})`);
+              this.value = max;
+            } else if (value < parseFloat(this.min)) {
+              this.value = this.min;
+            }
+          });
+
+          removeButton.addEventListener('click', function() {
+            if (orderItemsBody.children.length > 1) {
+              row.remove();
+            } else {
+              alert('Cannot remove the last row');
+            }
+          });
+        }
+
+        createNewRow();
+
+        addRowButton.addEventListener('click', createNewRow);
+
+        orderButton.addEventListener('click', function() {
+          const memberId = document.getElementById('member_select').value;
+          if (!memberId) {
+            alert('Please select a buyer');
+            return;
+          }
+
+          const items = [];
+          let hasValidItems = false;
+
+          document.querySelectorAll('#order_items_body tr').forEach(row => {
+            const itemSelect = row.querySelector('.item-select');
+            const quantityInput = row.querySelector('.quantity-input');
+            const measurementValue = row.querySelector('.measurement-value');
+            
+            if (itemSelect.value && quantityInput.value && measurementValue.value) {
+              hasValidItems = true;
+              items.push({
+                item_id: itemSelect.value,
+                requested_quantity: parseInt(quantityInput.value),
+                requested_measurement: parseFloat(measurementValue.value)
+              });
+            }
+          });
+
+          if (!hasValidItems) {
+            alert('Please add at least one item with both quantity and measurement');
+            return;
+          }
+
+          fetch('/api/place_order', {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+              'X-CSRF-Token': document.querySelector('[name="csrf-token"]').content
+            },
+            body: JSON.stringify({ 
+              member_id: memberId,
+              items: items
+            })
+          })
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              window.location.href = '/orders';
+            } else {
+              alert(data.error || 'Error placing order');
+            }
+          });
+        });
+
+        // Add some CSS styles
+        const style = document.createElement('style');
+        style.textContent = `
+          .box-tools {
+            float: right;
+            margin-top: -5px;
+          }
+          .form-inline {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+          }
+          .mr-2 {
+            margin-right: 10px;
+          }
+          .stock-info {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+          }
+          .order-inputs {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+          }
+          .order-inputs .form-group {
+            margin-bottom: 0;
+          }
+          .order-inputs label {
+            font-size: 12px;
+            margin-bottom: 3px;
+          }
+          .input-group {
+            display: flex;
+            width: 100%;
+          }
+          .input-group .measurement-value {
+            border-right: 0;
+            border-top-right-radius: 0;
+            border-bottom-right-radius: 0;
+          }
+          .input-group .measurement-unit {
+            border-top-left-radius: 0;
+            border-bottom-left-radius: 0;
+          }
+        `;
+        document.head.appendChild(style);
+
+        // Update the measurement value when unit changes
+        $(document).on('change', '.measurement-unit', function() {
+          var row = $(this).closest('tr');
+          var value = row.find('.measurement-value').val();
+          var unit = $(this).val();
+          
+          // Convert the value based on selected unit
+          if (value) {
+            value = parseFloat(value);
+            switch(unit) {
+              case 'millimeters':
+                value = value / 1000; // Convert mm to meters
+                break;
+              case 'centimeters':
+                value = value / 100; // Convert cm to meters
+                break;
+              case 'feet':
+                value = value * 0.3048; // Convert feet to meters
+                break;
+              case 'inches':
+                value = value * 0.0254; // Convert inches to meters
+                break;
+              case 'milliliters':
+                value = value / 1000; // Convert ml to liters
+                break;
+              // meters/liters are base units, no conversion needed
+            }
+            row.find('.measurement-value').attr('data-meters', value);
+          }
+        });
+
+        // Add subcategory filter change handler
+        document.getElementById('subcategory_filter').addEventListener('change', function() {
+          const selectedSubcategory = this.value;
+          
+          // Show/hide rows based on subcategory selection
+          document.querySelectorAll('#order_items_body tr').forEach(row => {
+            const rowSubcategory = row.querySelector('.subcategory-select').value;
+            if (!selectedSubcategory || rowSubcategory === selectedSubcategory) {
+              row.style.display = '';
+            } else {
+              row.style.display = 'none';
+            }
+          });
+        });
+      });
+    </script>
+  </body>

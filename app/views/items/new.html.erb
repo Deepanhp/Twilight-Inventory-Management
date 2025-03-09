@@ -1,0 +1,420 @@
+<body class="hold-transition skin-blue sidebar-mini">
+  <div class="wrapper">
+    <%= render 'layouts/header' %>
+    <div class="content-wrapper">
+      <section class="content-header">
+        <h1>Add New Items</h1>
+      </section>
+
+      <section class="content">
+        <div class="row">
+          <div class="col-md-12">
+            <div class="box box-primary">
+              <div class="box-header with-border">
+                <h3 class="box-title">Item Details</h3>
+              </div>
+              
+              <%= form_for :items, url: items_path, method: :post, html: { class: 'form-horizontal' } do |f| %>
+                <% if @items&.any? && @items.any? { |item| item.errors.any? } %>
+                  <div class="alert alert-danger">
+                    <h4><i class="icon fa fa-ban"></i> Errors prevented items from being saved:</h4>
+                    <ul>
+                      <% @items.each do |item| %>
+                        <% item.errors.full_messages.each do |message| %>
+                          <li><%= message %></li>
+                        <% end %>
+                      <% end %>
+                    </ul>
+                  </div>
+                <% end %>
+                
+                <div class="box-body">
+                  <!-- Basic Information -->
+                  <div class="form-group">
+                    <label class="col-sm-2 control-label">Description</label>
+                    <div class="col-sm-10">
+                      <%= text_area_tag :description, nil, class: "form-control", rows: "3", 
+                          placeholder: "Enter detailed description of the item" %>
+                    </div>
+                  </div>
+
+                  <div class="form-group">
+                    <label class="col-sm-2 control-label">Category *</label>
+                    <div class="col-sm-4">
+                      <%= select_tag "category_id", 
+                          options_for_select([["Select Category", ""]] + Category.all.map{|c| [c.name, c.id]}), 
+                          { class: 'form-control select2', 
+                            id: 'category_select', 
+                            required: true } %>
+                    </div>
+
+                    <label class="col-sm-2 control-label">Subcategory *</label>
+                    <div class="col-sm-4">
+                      <%= select_tag "subcategory_id", 
+                          options_for_select([["Select Subcategory", ""]]), 
+                          { class: 'form-control select2', 
+                            id: 'subcategory_select', 
+                            required: true } %>
+                    </div>
+                  </div>
+
+                  <!-- Add this right after the subcategory select -->
+                  <% if Rails.env.development? %>
+                    <div class="col-sm-12">
+                      <small class="text-muted">
+                        Available Categories: <%= Category.pluck(:name).join(', ') %><br>
+                        Total Subcategories: <%= SubCategory.count %><br>
+                        Subcategories by Category:<br>
+                        <% Category.all.each do |category| %>
+                          <%= category.name %>: <%= category.sub_categories.pluck(:name).join(', ') %><br>
+                        <% end %>
+                        <div id="debug-log"></div>
+                      </small>
+                    </div>
+                  <% end %>
+
+                  <!-- Dynamic Items Section -->
+                  <div class="form-group">
+                    <div class="col-sm-12">
+                      <div class="panel panel-default">
+                        <div class="panel-heading clearfix">
+                          <h3 class="panel-title pull-left">Items</h3>
+                          <button type="button" id="add_item_button" class="btn btn-success btn-sm pull-right">
+                            <i class="fa fa-plus"></i> Add Item
+                          </button>
+                        </div>
+                        <div class="panel-body">
+                          <div id="dynamic_items_container">
+                            <!-- Dynamic items will be added here -->
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="box-footer">
+                  <div class="col-sm-offset-2 col-sm-10">
+                    <%= f.submit "Save Items", class: "btn btn-primary" %>
+                    <%= link_to "Cancel", items_path, class: "btn btn-default" %>
+                  </div>
+                </div>
+              <% end %>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      // Wait for jQuery and Select2 to be ready
+      if (typeof jQuery != 'undefined' && typeof jQuery.fn.select2 != 'undefined') {
+        $('.select2').select2({
+          theme: "classic",
+          width: '100%'
+        });
+      } else {
+        console.error('Select2 or jQuery not loaded');
+      }
+
+      let categorySelect = document.getElementById("category_select");
+      let subcategorySelect = document.getElementById("subcategory_select");
+      let addItemButton = document.getElementById("add_item_button");
+      let dynamicItemsContainer = document.getElementById("dynamic_items_container");
+
+      // Load category and subcategory data
+      let categoriesData = <%= raw Category.all.to_json(only: [:id, :name]) %>;
+      let categoryMeasurements = {
+        'Rods': ['length'],
+        'Pipes': ['length'],
+        'Barrell Oil': ['volume']
+      };
+
+      let subcategoriesData = <%= raw SubCategory.all.to_json(
+        only: [:id, :name, :category_id]
+      ) %>;
+
+      // Add CSRF token
+      const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+
+      // Handle category change
+      categorySelect.addEventListener("change", function() {
+        let selectedCategoryId = this.value;
+        const headerCompanySelect = document.querySelector('#company_id');
+        
+        if (!headerCompanySelect?.value) {
+          alert('Please select a company first');
+          this.value = '';
+          return;
+        }
+
+        if (selectedCategoryId) {
+          debugLog('Fetching subcategories for category:', selectedCategoryId);
+          fetch(`/api/items/subcategories_by_category?category_id=${selectedCategoryId}&company_id=${headerCompanySelect.value}`, {
+            method: 'GET',
+            headers: {
+              'X-CSRF-Token': csrfToken,
+              'Accept': 'application/json',
+              'Content-Type': 'application/json'
+            }
+          })
+          .then(response => {
+            debugLog(`Response status: ${response.status}`);
+            if (!response.ok) {
+              throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+          })
+          .then(subcategories => {
+            debugLog(`Received subcategories: ${JSON.stringify(subcategories)}`);
+            if (subcategories && subcategories.length > 0) {
+              subcategorySelect.innerHTML = '<option value="">Select Subcategory</option>' + 
+                subcategories.map(sub => 
+                  `<option value="${sub.id}">${sub.name}</option>`
+                ).join('');
+            } else {
+              subcategorySelect.innerHTML = '<option value="">No subcategories available for this company</option>';
+            }
+            $(subcategorySelect).trigger('change');
+          })
+          .catch(error => {
+            debugLog(`Error loading subcategories: ${error.message}`);
+            subcategorySelect.innerHTML = '<option value="">Error loading subcategories</option>';
+            $(subcategorySelect).trigger('change');
+          });
+        } else {
+          subcategorySelect.innerHTML = '<option value="">Select Category First</option>';
+          $(subcategorySelect).trigger('change');
+        }
+        clearItems();
+      });
+
+      function clearItems() {
+        dynamicItemsContainer.innerHTML = '';
+      }
+
+      // Add new item row
+      addItemButton.addEventListener("click", function() {
+        let selectedCategoryId = categorySelect.value;
+        let category = categoriesData.find(cat => cat.id == selectedCategoryId);
+        let selectedCategoryName = categorySelect.options[categorySelect.selectedIndex].text;
+        
+        if (!category) {
+          alert('Please select a category first');
+          return;
+        }
+
+        if (!subcategorySelect.value) {
+          alert('Please select a subcategory first');
+          return;
+        }
+
+        let itemRow = document.createElement("div");
+        itemRow.classList.add("item-row");
+        
+        let measurementFields = '';
+        let measurements = categoryMeasurements[selectedCategoryName] || [];
+        
+        if (measurements.includes("length")) {
+          measurementFields += `
+            <div class="col-sm-3">
+              <div class="input-group">
+                <input type="number" step="0.01" min="0" 
+                  class="form-control" 
+                  name="items[][length]" 
+                  placeholder="Length" 
+                  required>
+                <span class="input-group-addon">meters</span>
+              </div>
+            </div>`;
+        }
+        if (measurements.includes("volume")) {
+          measurementFields += `
+            <div class="col-sm-3">
+              <div class="input-group">
+                <input type="number" step="0.01" min="0" 
+                  class="form-control" 
+                  name="items[][volume]" 
+                  placeholder="Volume" 
+                  required>
+                <span class="input-group-addon">liters</span>
+              </div>
+            </div>`;
+        }
+
+        // Add quantity field
+        measurementFields += `
+          <div class="col-sm-3">
+            <div class="input-group">
+              <input type="number" min="1" 
+                class="form-control" 
+                name="items[][quantity]" 
+                placeholder="Quantity" 
+                required>
+              <span class="input-group-addon">pieces</span>
+            </div>
+          </div>`;
+
+        itemRow.innerHTML = `
+          <div class="row item-entry" style="margin-bottom: 10px; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+            <div class="col-sm-12">
+              <div class="row">
+                ${measurementFields}
+                <div class="col-sm-2">
+                  <button type="button" class="btn btn-danger btn-block remove-item">
+                    <i class="fa fa-trash"></i> Remove
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+
+        dynamicItemsContainer.appendChild(itemRow);
+      });
+
+      // Remove item row
+      dynamicItemsContainer.addEventListener("click", function(event) {
+        if (event.target.classList.contains("remove-item") || 
+            event.target.parentElement.classList.contains("remove-item")) {
+          let row = event.target.closest('.item-row');
+          if (row) {
+            row.remove();
+          }
+        }
+      });
+
+      // Form validation
+      document.querySelector('form').addEventListener('submit', function(e) {
+        if (!categorySelect.value) {
+          e.preventDefault();
+          alert('Please select a category');
+          return false;
+        }
+
+        if (!subcategorySelect.value) {
+          e.preventDefault();
+          alert('Please select a subcategory');
+          return false;
+        }
+
+        if (dynamicItemsContainer.children.length === 0) {
+          e.preventDefault();
+          alert('Please add at least one item');
+          return false;
+        }
+        
+        // Get company_id from header's company selector
+        const headerCompanySelect = document.querySelector('#company_id');
+        if (!headerCompanySelect?.value) {
+          e.preventDefault();
+          alert('Please select a company from the header');
+          return false;
+        }
+
+        // Validate all required fields
+        const requiredFields = e.target.querySelectorAll('input[required]');
+        for (let field of requiredFields) {
+          if (!field.value) {
+            e.preventDefault();
+            alert('Please fill in all required fields');
+            field.focus();
+            return false;
+          }
+        }
+
+        // Debug form submission
+        const formData = {
+          company_id: headerCompanySelect.value,
+          category_id: categorySelect.value,
+          subcategory_id: subcategorySelect.value,
+          description: document.getElementById('description').value,
+          items: Array.from(document.querySelectorAll('.item-row')).map(row => ({
+            length: row.querySelector('input[name="items[][length]"]')?.value,
+            volume: row.querySelector('input[name="items[][volume]"]')?.value,
+            quantity: row.querySelector('input[name="items[][quantity]"]').value
+          }))
+        };
+
+        debugLog(`Submitting form to ${this.action} with data: ${JSON.stringify(formData)}`);
+        
+        // If you want to see the actual form data being sent
+        const actualFormData = new FormData(this);
+        debugLog('Form data entries:');
+        for (let pair of actualFormData.entries()) {
+          debugLog(`${pair[0]}: ${pair[1]}`);
+        }
+      });
+
+      function debugLog(message) {
+        if (document.getElementById('debug-log')) {
+          const logDiv = document.getElementById('debug-log');
+          logDiv.innerHTML += `<div>${new Date().toISOString()}: ${message}</div>`;
+        }
+        console.log(message);
+      }
+    });
+  </script>
+
+  <style>
+    .item-entry {
+      background-color: #f9f9f9;
+      transition: all 0.3s ease;
+      margin-bottom: 15px;
+    }
+    .item-entry:hover {
+      background-color: #f5f5f5;
+    }
+    .select2-container {
+      width: 100% !important;
+    }
+    .panel-heading {
+      padding: 10px 15px;
+    }
+    .panel-heading:after {
+      content: '';
+      display: table;
+      clear: both;
+    }
+    .panel-title {
+      margin: 5px 0;
+      line-height: 30px;
+    }
+    .input-group {
+      margin-bottom: 10px;
+    }
+    .form-group {
+      margin-bottom: 20px;
+    }
+    .btn-block {
+      width: 100%;
+    }
+    #dynamic_items_container {
+      padding: 15px;
+    }
+    .measurement-field {
+      margin-bottom: 10px;
+    }
+    .select2-container--classic .select2-selection--single {
+      height: 34px;
+      padding: 2px;
+    }
+    .select2-container--classic .select2-selection--single .select2-selection__rendered {
+      line-height: 30px;
+    }
+    .select2-container--classic .select2-selection--single .select2-selection__arrow {
+      height: 32px;
+    }
+    .field_with_errors select,
+    .field_with_errors input {
+      border-color: #dd4b39;
+    }
+    .help-block {
+      color: #dd4b39;
+      margin-top: 5px;
+      font-size: 12px;
+    }
+  </style>
+</body>

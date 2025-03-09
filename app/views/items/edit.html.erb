@@ -1,0 +1,59 @@
+<body class="hold-transition skin-blue sidebar-mini">
+  <div class="wrapper">
+    <%= render 'layouts/header' %>
+    <div class="content-wrapper">
+      <section class="content-header">
+        <h1>Edit Item</h1>
+        <ol class="breadcrumb">
+          <li><a href="#"><i class="fa fa-home"></i> Home Page</a></li>
+          <li class="active">Edit Item</li>
+        </ol>
+      </section>
+      <section class="content">
+        <div class="row">
+          <div class="col-md-6">
+            <div class="box box-header">
+              <div class="box-header with-border">
+                <h3 class="box-title">Basic Information</h3>
+              </div>
+              <div class="box-body">
+                <p><strong>Name:</strong> <%= @item.name %></p>
+                <p><strong>Description:</strong> <%= @item.description %></p>
+                <p><strong>Category:</strong> <%= @item.category.name %></p>
+                <p><strong>Measurements:</strong> <%= @item.name %></p>
+              </div>
+              <%= form_for @item do |f| %>
+              <% if @item.errors.any? %>
+              <div id="error_explanation">
+                <h2><%= pluralize(@item.errors.count, "error") %> prohibited this item from being saved:</h2>
+                <ul>
+                  <% @item.errors.full_messages.each do |message| %>
+                  <li><%= message %></li>
+                  <% end %>
+                </ul>
+              </div>
+              <% end %>
+              <div class="box-body">
+                <div class="form-group">
+                  <label>Quantity</label>
+                  <%= f.number_field :quantity, class: "form-control", placeholder: "Enter Remaining Quantity", required: true %>
+                </div>
+              </div>
+              <%= hidden_field_tag "item[company_id]", nil, id: "company_id_value" %>
+              <div class="box-footer">
+                <%= f.submit "Submit", class: "btn btn-primary"%>
+              </div>
+              <% end %>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+    <footer class="main-footer">
+      <div class="pull-right hidden-xs">
+        <b>Version</b> 0.1
+      </div>
+      Content available under
+      <a href="http://creativecommons.org/licenses/by-sa/4.0/">Creative Commons Attribution-ShareAlike 4.0</a>.
+    </footer>
+  </body>

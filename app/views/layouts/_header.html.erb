@@ -1,0 +1,160 @@
+<header class="main-header">
+  <!-- Logo -->
+  <a href="<%= root_url %>" class="logo">
+    <!-- mini logo for sidebar mini 50x50 pixels -->
+    <span class="logo-mini">
+      <b>f</b>inv</span>
+    <!-- logo for regular state and mobile devices -->
+    <span class="logo-lg">
+      <b>Om Sakthi Hydraulics</b>
+    </span>
+  </a>
+  <!-- Header Navbar: style can be found in header.less -->
+  <nav class="navbar navbar-static-top">
+    <% if @current_user&.role_type == 'super_admin'%>
+    <div style="display: flex; align-items: center; gap: 10px; margin-right: 20px;">
+      <label for="company_id" style="color: white; font-weight: bold;">Select Company:</label>
+      <%= select_tag :company_id,
+          options_for_select(
+            [["All Companies", ""]] + Company.all.map{|c| ["#{c.name} - #{c.location}", c.id]},
+            selected: params[:company_id] || session[:company_id]
+          ),
+          class: 'form-control',
+          prompt: false,
+          style: 'min-width: 200px;',
+          onchange: 'handleCompanyChange(this.value)' %>
+    </div>
+    <% else %>
+      <% comp = Company.find_by(id: @current_user&.company_id) %>
+      <p style="color:white; font-size: 16px; font-weight: bold; margin-left: 10px;"><%= comp&.name.to_s + ' - ' + comp&.location.to_s %></p>
+    <% end %>
+  </nav>
+</header>
+
+<!-- Left side column. contains the logo and sidebar -->
+<aside class="main-sidebar">
+  <!-- sidebar: style can be found in sidebar.less -->
+  <section class="sidebar">
+    <!-- Sidebar user panel -->
+    <div class="user-panel">
+      <div class="pull-left image">
+        <%= image_tag("user2-160x160.jpg", class: "img-circle") %>
+      </div>
+      <div class="pull-left info">
+        <p><%= current_user&.name %></p>
+        <a href="<%= edit_user_path(current_user&.id) %>">
+          <i class="fa fa-edit"></i>
+          Edit Profile
+        </a>
+
+        <%# <div> %>
+        <%# <a href="#"> %>
+        <%= link_to "Log Out", destroy_user_session_path, method: :delete, data: { confirm: "Are you sure you want to log out?" } %>
+          <%# <i class="fa fa-sign-out"></i>Log Out <% end %>
+        <%# </a> %>
+      <%# </div> %>
+      </div>
+    </div>
+    <!-- sidebar menu: : style can be found in sidebar.less -->
+    <ul class="sidebar-menu">
+      <li class="header">MAIN NAVIGATION</li>
+      <li>
+        <a href="<%= root_url %>">
+          <i class="fa fa-home"></i>
+          <span>Home Page</span>
+        </a>
+      </li>
+      <li>
+        <a href="<%= items_path %>">
+          <i class="fa fa-search"></i>
+          <span>Check Inventory</span>
+        </a>
+      </li>
+      <li>
+        <a href="<%= orders_path %>">
+          <i class="fa fa-history"></i>
+          <span>Orders</span>
+        </a>
+      </li>
+      <li>
+        <a href=" <%= new_order_path %>">
+          <i class="fa fa-plus"></i>
+          <span>Add Order</span>
+        </a>
+      </li>
+      <li>
+        <a href=" <%= new_item_path %>">
+          <i class="fa fa-plus"></i>
+          <span>Add Item</span>
+        </a>
+      </li>
+      <li>
+        <a href="<%= new_member_path %>">
+          <i class="fa fa-user-plus"></i>
+          <span>Add Buyer</span>
+        </a>
+      </li>
+    </ul>
+  </section>
+  <!-- /.sidebar -->
+</aside>
+
+<script>
+function handleCompanyChange(companyId) {
+  // Store in session/localStorage
+  localStorage.setItem('company_id', companyId);
+  
+  // Check if we're on the new item page
+  const isNewItemPage = window.location.pathname.endsWith('/items/new');
+  if (isNewItemPage && !companyId) {
+    alert('Please select a specific company to add items');
+    // Restore previous selection
+    const select = document.querySelector('#company_id');
+    select.value = localStorage.getItem('company_id') || '';
+    return;
+  }
+  
+  // Update current URL with new company_id
+  const currentPath = window.location.pathname;
+  const params = new URLSearchParams(window.location.search);
+  params.set('company_id', companyId);
+  
+  // Preserve other query parameters
+  window.location.href = `${currentPath}?${params.toString()}`;
+}
+
+// Set initial company from localStorage if available
+document.addEventListener('DOMContentLoaded', function() {
+  const savedCompanyId = localStorage.getItem('company_id');
+  const isNewItemPage = window.location.pathname.endsWith('/items/new');
+  const companySelect = document.querySelector('#company_id');
+  
+  if (!companySelect) return; // Exit if select doesn't exist
+  
+  if (savedCompanyId) {
+    if (companySelect.value !== savedCompanyId) {
+      companySelect.value = savedCompanyId;
+      if (!isNewItemPage) {
+        // Don't trigger reload if we're just setting initial value
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('company_id') !== savedCompanyId) {
+          handleCompanyChange(savedCompanyId);
+        }
+      }
+    }
+  }
+  
+  // If on new item page, ensure a company is selected
+  if (isNewItemPage) {
+    if (!companySelect.value) {
+      alert('Please select a company to add items');
+    }
+    
+    // Remove the "All Companies" option on the new item page
+    const allCompaniesOption = companySelect.querySelector('option[value=""]');
+    if (allCompaniesOption) {
+      allCompaniesOption.remove();
+    }
+  }
+});
+</script>
