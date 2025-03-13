@@ -147,6 +147,10 @@
           const measurementUnit = row.querySelector('.measurement-unit');
           const removeButton = row.querySelector('.remove-row');
           
+          // Ensure both inputs are disabled by default
+          quantityInput.disabled = true;
+          measurementValue.disabled = true;
+          
           categorySelect.addEventListener('change', function() {
             const headerCompanySelect = document.querySelector('#company_id');
             const subcategoryFilter = document.getElementById('subcategory_filter');
@@ -199,6 +203,7 @@
             itemSelect.disabled = true;
             quantityInput.disabled = true;
             measurementValue.disabled = true;
+            quantityInput.value = '';
             measurementValue.value = '';
             
             if (this.value) {
@@ -228,8 +233,8 @@
             
             itemSelect.disabled = !this.value;
             quantityInput.disabled = true;
-            measurementValue.disabled = true;
-            measurementValue.value = '';
+            row.querySelector('.measurement-value').disabled = true;
+            row.querySelector('.measurement-value').value = '';
             
             if (this.value) {
               fetch(`/api/items/items_by_subcategory?subcategory_id=${this.value}&company_id=${headerCompanySelect.value}`)
@@ -256,9 +261,9 @@
               row.querySelector('.available-stock').textContent = '-';
               row.querySelector('.measurement').textContent = '-';
               quantityInput.disabled = true;
-              measurementValue.disabled = true;
+              row.querySelector('.measurement-value').disabled = true;
               quantityInput.value = '';
-              measurementValue.value = '';
+              row.querySelector('.measurement-value').value = '';
               return;
             }
 
@@ -270,7 +275,7 @@
             row.querySelector('.measurement').textContent = `${measurementValue} ${measurement}`;
             
             quantityInput.disabled = false;
-            measurementValue.disabled = false;
+            row.querySelector('.measurement-value').disabled = false;
           });
 
           quantityInput.addEventListener('change', function() {
