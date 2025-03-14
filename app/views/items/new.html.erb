@@ -13,7 +13,7 @@
               <div class="box-header with-border">
                 <h3 class="box-title">Item Details</h3>
               </div>
-              
+              <% unless @restricted_access %>
               <%= form_for :items, url: items_path, method: :post, html: { class: 'form-horizontal' } do |f| %>
                 <% if @items&.any? && @items.any? { |item| item.errors.any? } %>
                   <div class="alert alert-danger">
@@ -100,6 +100,14 @@
                   </div>
                 </div>
               <% end %>
+              <% else %>
+                <!-- Restricted Access Modal Trigger -->
+                <script>
+                  document.addEventListener("DOMContentLoaded", function() {
+                    $("#restrictedAccessModal").modal("show");
+                  });
+                </script>
+              <% end %>
             </div>
           </div>
         </div>
@@ -107,7 +115,35 @@
     </div>
   </div>
 
+  <!-- Restricted Access Modal -->
+    <div class="modal fade" id="restrictedAccessModal" tabindex="-1" role="dialog" aria-labelledby="restrictedAccessLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content shadow-lg border-0 rounded">
+          <div class="modal-header bg-danger text-white">
+            <h5 class="modal-title" id="restrictedAccessLabel">🚫 Access Denied</h5>
+            <button type="button" class="close text-white redirect-home" data-dismiss="modal" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div class="modal-body text-center">
+            <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
+            <p class="lead">You are not authorized to create an order.<br> Please contact the admin.</p>
+          </div>
+          <div class="modal-footer justify-content-center">
+            <button type="button" class="btn btn-danger px-4 py-2 redirect-home">OK</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
   <script>
+    document.addEventListener("DOMContentLoaded", function() {
+        document.querySelectorAll(".redirect-home").forEach(button => {
+          button.addEventListener("click", function() {
+            window.location.href = "/";
+          });
+        });
+      });
     document.addEventListener("DOMContentLoaded", function() {
       // Wait for jQuery and Select2 to be ready
       if (typeof jQuery != 'undefined' && typeof jQuery.fn.select2 != 'undefined') {

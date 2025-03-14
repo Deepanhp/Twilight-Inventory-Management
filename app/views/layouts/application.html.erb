@@ -92,5 +92,18 @@
         });
     });
     </script> %>
+    <script type="text/javascript">
+      document.addEventListener("DOMContentLoaded", function () {
+        console.log('dataaaaaaaaaaaaaaaaaaaaaaaaaaaa')
+        const storedValue = localStorage.getItem("company_id"); // Get value from localStorage
+        if (storedValue) {
+          let url = new URL(window.location);
+          if (url.searchParams.get("company_id") !== storedValue) {
+            url.searchParams.set("company_id", storedValue);
+            window.history.replaceState({}, "", url.toString());
+          }
+        }
+      });
+    </script>
   </body>
 </html>

@@ -46,7 +46,7 @@
                           <tr>
                             <th>Item</th>
                             <th>Subcategory</th>
-                            <th>Total Quantity</th>
+                            <th>Company ID</th>
                             <th>Available Quantity</th>
                             <th>Measurements</th>
                             <th>Stock Status</th>
@@ -59,7 +59,7 @@
                                 class="<%= item.stock_status %>">
                               <td><%= item.name %></td>
                               <td><%= item.sub_category&.name %></td>
-                              <td><%= item.quantity %></td>
+                              <td><%= item.company_id %></td>
                               <td><%= item.remaining_quantity %></td>
                               <td>
                                 <% item.measurements.each do |key, value| %>

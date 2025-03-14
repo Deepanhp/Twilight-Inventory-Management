@@ -48,6 +48,7 @@ class OrdersController < ApplicationController
 
   def new
     @current_user = current_user
+    @restricted_access = set_resticted_access(@current_user, params[:company_id].to_i)
     company_id = @current_user.role_type != 'super_admin' ? @current_user.company_id : params[:company_id]
     @order = Order.new
     company = Company.find_by(id: company_id)

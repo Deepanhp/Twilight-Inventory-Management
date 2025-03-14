@@ -39,6 +39,7 @@ class ItemsController < ApplicationController
 
   def new
     @current_user = current_user
+    @restricted_access = @current_user.company_id.to_i != params[:company_id].to_i
     @item = Item.new
     @errors = []
   end
