@@ -73,47 +73,27 @@
               <% end %>
               <% else %>
                 <!-- Restricted Access Modal Trigger -->
-                <script>
+                <%# <script>
                   document.addEventListener("DOMContentLoaded", function() {
                     $("#restrictedAccessModal").modal("show");
                   });
-                </script>
+                </script> %>
+                <%= render 'layouts/restricted_access_modal' %>
               <% end %>
             </div>
           </div>
         </div>
       </section>
     </div>
-
-    <!-- Restricted Access Modal -->
-    <div class="modal fade" id="restrictedAccessModal" tabindex="-1" role="dialog" aria-labelledby="restrictedAccessLabel" aria-hidden="true">
-      <div class="modal-dialog modal-dialog-centered" role="document">
-        <div class="modal-content shadow-lg border-0 rounded">
-          <div class="modal-header bg-danger text-white">
-            <h5 class="modal-title" id="restrictedAccessLabel">🚫 Access Denied</h5>
-            <button type="button" class="close text-white redirect-home" data-dismiss="modal" aria-label="Close">
-              <span aria-hidden="true">&times;</span>
-            </button>
-          </div>
-          <div class="modal-body text-center">
-            <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
-            <p class="lead">You are not authorized to create an order.<br> Please contact the admin.</p>
-          </div>
-          <div class="modal-footer justify-content-center">
-            <button type="button" class="btn btn-danger px-4 py-2 redirect-home">OK</button>
-          </div>
-        </div>
-      </div>
-    </div>
     
     <script>
-       document.addEventListener("DOMContentLoaded", function() {
+       d<%# ocument.addEventListener("DOMContentLoaded", function() {
         document.querySelectorAll(".redirect-home").forEach(button => {
           button.addEventListener("click", function() {
             window.location.href = "/";
           });
         });
-      });
+      }); %>
       document.addEventListener("DOMContentLoaded", function() {
         const addRowButton = document.getElementById('add_row_button');
         const orderButton = document.getElementById('order_button');

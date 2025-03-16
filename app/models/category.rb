@@ -14,9 +14,11 @@ class Category < ApplicationRecord
 
   def measurement_types
     case name
-    when 'Rods'
+    when 'Rod'
       ['length']
-    when 'Pipes'
+    when 'Induction Rod'
+      ['length']
+    when 'Honning Tube'
       ['length']
     when 'Barrell Oil'
       ['volume']

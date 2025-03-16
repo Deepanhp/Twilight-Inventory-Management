@@ -29,8 +29,8 @@ class Api::ItemsController < ApplicationController
     if category && company_id.present?
       # Get subcategories that have items in the selected company
       subcategories = category.sub_categories
-        .joins(:items)
-        .where(items: { company_id: company_id })
+        # .joins(:items)
+        # .where(items: { company_id: company_id })
         .select('DISTINCT sub_categories.id, sub_categories.name')
         .order(:name)  # Sort subcategories alphabetically
       

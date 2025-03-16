@@ -10,7 +10,7 @@
             <% items.each do |item| %>
               <p class="blinker animated-alert">
                 <i class="fa fa-exclamation-circle"></i> 
-                <strong><%= item[:measurement].values.first %> <%= item[:measurement].keys.first %></strong>  
+                <strong><%= item[:measurement]&.values&.first %> <%= item[:measurement]&.keys&.first %></strong>  
                 is running low! (Remaining: <%= item[:total_remaining_quantity] %>)
               </p>
             <% end %>
