@@ -119,4 +119,40 @@ namespace :db do
     puts "#{Item.count} items"
     puts "Done!"
   end
+
+  desc 'Adding subcategory data'
+  task add_category_and_sub_catgories: :environment do
+    Order.delete_all
+    Item.delete_all
+    SubCategory.delete_all
+    Category.delete_all
+    categories = {
+    'Rod' => [6,8,10,12,16,20,25,28,30,32,35,36,40,45,50,55,60,63,65,70,75,80,85,90,95,100,110,120,125,140,150],
+    'Induction Rod' => [6,8,10,12,16,20,25,28,30,32,35,36,40,45,50,55,60,63,65,70,75,80,85,90,95,100,110,120,125,140,150],
+    'Honning Tube' => ['32*42','40*50','45*55','50*60','55*65','60*72','60*73','63*73','63*75','63*76','70*80','70*82',
+                       '70*85','75*88','75*90','80*90','80*92','80*95','80*100','85*100','90*105','95*110','100*112','100*114',
+                       '100*115','100*120','100*121','100*125','105*120','110*125','110*130','110*135','115*130','115*135',
+                       '115*140','120*140','120*150','120*152','125*140','125*145','125*151','130*155','130*160','135*155',
+                       '135*160','135*155','135*160','140*160','140*165','140*170','150*170','150*180','160*180','160*185',
+                       '160*190','180*203','180*210','180*220','200*220','200*225','200*230','200*232','200*245','200*250',
+                       '220*273','250*280','250*286','250*300','280*325','300*350']
+    }
+
+    # Insert categories in bulk
+    category_records = categories.keys.map { |name| { name: name } }
+    Category.insert_all(category_records)
+
+    # Prepare subcategory records
+    subcategory_records = []
+    categories.each do |category_name, values|
+      category_id = Category.find_by(name: category_name).id
+      values.each do |value|
+        name = category_name == 'Honning Tube' ? value.to_s : "#{value} inch dia"
+        subcategory_records << { category_id: category_id, name: name }
+      end
+    end
+
+    # Bulk insert subcategories
+    SubCategory.insert_all(subcategory_records)
+  end
 end 
