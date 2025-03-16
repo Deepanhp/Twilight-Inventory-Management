@@ -85,7 +85,7 @@
             // Prepare labels with measurement units
             const labels = data.items.map(item => {
               const measurement = Object.entries(item.measurement || {})[0] || ["N/A", 0];
-              return `${item.display_name} (${measurement[1]} ${measurement[0]})`;
+              return `${item.display_name} (${item.remaining_quantity}))`;
             });
 
             // Create new chart

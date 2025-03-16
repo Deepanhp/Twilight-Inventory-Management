@@ -1,3 +1,4 @@
+<% if @low_stock_subcategories.present? %>
 <div class="low-stock-carousel-section">
   <h2 class="carousel-heading">⚠️ Low Stock Items ⚠️</h2>
   <div class="low-stock-carousel-container">
@@ -21,7 +22,11 @@
     <button class="carousel-arrow right-arrow" onclick="moveCarousel(1)">&#9655;</button>
   </div>
 </div>
-
+<% else %>
+<div class="low-stock-carousel-section">
+  <h2 class="carousel-heading">Currently No Low stocks</h2>
+</div>
+<% end %>
 <style>
 .low-stock-carousel-section {
   background: linear-gradient(135deg, #e3f2fd, #bbdefb);

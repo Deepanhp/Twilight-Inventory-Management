@@ -25,6 +25,7 @@
           </div>
           <!-- /.box-header -->
           <!-- form start -->
+          <% unless @restricted_access %>
           <%= form_for(@member) do |f| %>
             <% if @member.errors.any? %>
               <div id="error_explanation">
@@ -57,6 +58,15 @@
               <%= f.submit "Submit", class: "btn btn-primary"%>
             </div>
             <% end %>
+          <% else %>
+                <!-- Restricted Access Modal Trigger -->
+                <%# <script>
+                  document.addEventListener("DOMContentLoaded", function() {
+                    $("#restrictedAccessModal").modal("show");
+                  });
+                </script> %>
+                <%= render 'layouts/restricted_access_modal' %>
+          <% end %>
         </div>
         <!-- /.box -->
       </div>

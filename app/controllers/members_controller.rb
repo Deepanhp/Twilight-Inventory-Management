@@ -15,6 +15,7 @@ class MembersController < ApplicationController
 
   def new
     @current_user = current_user
+    @restricted_access = set_resticted_access(@current_user, params[:company_id].to_i)
     @member = Member.new
   end
 

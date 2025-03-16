@@ -67,8 +67,6 @@ class DashboardController < ApplicationController
 
         if converted_measurement.to_i < 50 && total_remaining_quantity.to_i < 20
           { measurement: measurement, total_remaining_quantity: total_remaining_quantity }
-        else
-          {measurement: nil, total_remaining_quantity: nil}
         end
       end
 
