@@ -1,45 +1,35 @@
 <body class="hold-transition skin-blue sidebar-mini">
   <div class="wrapper">
     <%= render 'layouts/header' %>
+
     <div class="content-wrapper">
       <section class="content-header">
         <h1>Dashboard</h1>
       </section>
 
       <section class="content">
-        <!-- Low Stock Items Blinker Categorized with Enhanced UI -->
+        <!-- Low Stock Items -->
         <div class="row">
           <div class="col-md-12">
-            <div class="box box-danger">
-              <div class="box-header with-border text-center">
-                <h3 class="box-title">⚠️ Critical Low Stock Items ⚠️</h3>
-              </div>
-              <div class="box-body low-stock-container">
-                <% @categories.each do |category| %>
-                  <% low_stock_items = category.items.select { |item| item.stock_status == :low_stock } %>
-                  <% if low_stock_items.any? %>
-                    <div class="low-stock-category">
-                      <h4 class="category-title"><%= category.name %></h4>
-                      <% low_stock_items.each do |item| %>
-                        <p class="blinker animated-alert">
-                          <i class="fa fa-exclamation-circle"></i> <strong><%= item.display_name %></strong> is running low!
-                        </p>
-                      <% end %>
-                    </div>
-                  <% end %>
-                <% end %>
-              </div>
-            </div>
+            <%= render 'low_stock_carousel' %>
           </div>
         </div>
 
+        <!-- Category-wise Stock Charts with Sorting -->
         <div class="row">
-          <!-- Category-wise Item Availability -->
           <% @categories.each do |category| %>
             <div class="col-md-4">
               <div class="box box-info">
                 <div class="box-header with-border">
                   <h3 class="box-title"><%= category.name %> Stock</h3>
+
+                  <!-- Individual Sorting Dropdown -->
+                  <select class="chart-sort" data-category-id="<%= category.id %>">
+                    <option value="quantity-asc">Quantity: Low to High</option>
+                    <option value="quantity-desc">Quantity: High to Low</option>
+                    <option value="measurement-asc">Measurement: Low to High</option>
+                    <option value="measurement-desc">Measurement: High to Low</option>
+                  </select>
                 </div>
                 <div class="box-body">
                   <canvas id="categoryChart-<%= category.id %>"></canvas>
@@ -48,110 +38,78 @@
             </div>
           <% end %>
         </div>
-
-        <!-- Buyers List -->
-        <div class="row">
-          <div class="col-md-12">
-            <div class="box box-warning">
-              <div class="box-header with-border">
-                <h3 class="box-title">Buyers List</h3>
-              </div>
-              <div class="box-body">
-                <table class="table table-bordered">
-                  <thead>
-                    <tr>
-                      <th>Name</th>
-                      <th>Email</th>
-                      <th>Phone</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <% @buyers.each do |buyer| %>
-                      <tr>
-                        <td><%= buyer.name %></td>
-                        <td><%= buyer.email %></td>
-                        <td><%= buyer.phone %></td>
-                      </tr>
-                    <% end %>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        </div>
       </section>
     </div>
   </div>
 
   <style>
-    .low-stock-container {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 20px;
-      padding: 10px;
-    }
-    .low-stock-category {
-      background: rgba(255, 0, 0, 0.1);
-      border: 2px solid red;
-      padding: 15px;
-      border-radius: 10px;
-      text-align: center;
-      width: 250px;
-      box-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
-    }
-    .category-title {
-      font-weight: bold;
-      color: darkred;
-      margin-bottom: 10px;
-    }
-    .blinker {
-      font-size: 18px;
-      font-weight: bold;
-      color: red;
-      animation: blinker 1s linear infinite, shake 0.5s ease-in-out infinite;
-    }
-    @keyframes blinker {
-      50% { opacity: 0; }
-    }
-    @keyframes shake {
-      0% { transform: translateX(0); }
-      25% { transform: translateX(-2px); }
-      50% { transform: translateX(2px); }
-      75% { transform: translateX(-2px); }
-      100% { transform: translateX(0); }
-    }
-    .chart-container {
-      position: relative;
-      width: 100%;
-      height: 300px;
+    .chart-sort {
+      float: right;
+      margin-top: -5px;
     }
   </style>
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script>
-    document.addEventListener("DOMContentLoaded", function() {
+    document.addEventListener("DOMContentLoaded", function () {
+      let chartInstances = {}; // Store all charts
+
+      // Initialize charts
       <% @categories.each do |category| %>
-        var ctx = document.getElementById("categoryChart-<%= category.id %>").getContext("2d");
-        new Chart(ctx, {
-          type: "pie",
-          data: {
-            labels: <%= category.items.map(&:display_name).to_json.html_safe %>,
-            datasets: [{
-              label: "Stock Count",
-              data: <%= category.items.map(&:remaining_quantity).to_json.html_safe %>,
-              backgroundColor: ["#FF6384", "#36A2EB", "#FFCE56", "#4CAF50"],
-              hoverOffset: 10
-            }]
-          },
-          options: {
-            animation: {
-              animateRotate: true,
-              animateScale: true
-            }
-          }
-        });
+        fetchAndCreateChart(<%= category.id %>, "quantity-asc");
       <% end %>
+
+      // Handle sorting per chart
+      document.querySelectorAll(".chart-sort").forEach(select => {
+        select.addEventListener("change", function () {
+          const categoryId = this.getAttribute("data-category-id");
+          const sortBy = this.value;
+          fetchAndCreateChart(categoryId, sortBy);
+        });
+      });
+
+      function fetchAndCreateChart(categoryId, sortBy) {
+        fetch(`/update_chart?category_id=${categoryId}&sort_by=${sortBy}`)
+          .then(response => response.json())
+          .then(data => {
+            const canvas = document.getElementById(`categoryChart-${categoryId}`);
+            if (!canvas) return;
+
+            const ctx = canvas.getContext("2d");
+
+            // Destroy previous chart instance if it exists
+            if (chartInstances[categoryId]) {
+              chartInstances[categoryId].destroy();
+            }
+
+            // Prepare labels with measurement units
+            const labels = data.items.map(item => {
+              const measurement = Object.entries(item.measurement || {})[0] || ["N/A", 0];
+              return `${item.display_name} (${measurement[1]} ${measurement[0]})`;
+            });
+
+            // Create new chart
+            chartInstances[categoryId] = new Chart(ctx, {
+              type: "pie",
+              data: {
+                labels: labels,
+                datasets: [{
+                  label: "Stock Count",
+                  data: data.items.map(item => item.remaining_quantity),
+                  backgroundColor: ["#FF6384", "#36A2EB", "#FFCE56", "#4CAF50"],
+                  hoverOffset: 10
+                }]
+              },
+              options: {
+                animation: {
+                  animateRotate: true,
+                  animateScale: true
+                }
+              }
+            });
+          })
+          .catch(error => console.error("Error fetching chart data:", error));
+      }
     });
   </script>
 </body>

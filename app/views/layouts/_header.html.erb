@@ -12,7 +12,7 @@
   <!-- Header Navbar: style can be found in header.less -->
   <nav class="navbar navbar-static-top">
     <div style="display: flex; align-items: center; gap: 10px; margin-right: 20px;">
-      <label for="company_id" style="color: white; font-weight: bold;">Select Company:</label>
+      <label for="company_id" style="color: white; font-weight: bold; width: 100%">Select Company:</label>
       <%= select_tag :company_id,
           options_for_select(
             [["All Companies", ""]] + Company.all.map{|c| ["#{c.name} - #{c.location}", c.id]},
@@ -20,7 +20,7 @@
           ),
           class: 'form-control',
           prompt: false,
-          style: 'min-width: 100px;',
+          style: 'min-width: 250px;',
           onchange: 'handleCompanyChange(this.value)' %>
     </div>
   </nav>

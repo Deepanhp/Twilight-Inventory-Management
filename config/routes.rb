@@ -14,6 +14,7 @@ Rails.application.routes.draw do
 
   root 'dashboard#index'
   get 'dashboard', to: 'dashboard#index'
+  get '/update_chart', to: 'dashboard#update_chart'
 
   resources :items do
     get "fetch_data", :on => :collection

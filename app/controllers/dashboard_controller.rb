@@ -49,10 +49,28 @@ class DashboardController < ApplicationController
 
     @buyers = Member.all
 
-    @low_stock_items = @categories.each_with_object({}) do |category, hash|
-      items = company_id.present? ? category.items.where(company_id: company_id) : category.items
-      low_stock = items.select { |item| item.stock_status == :low_stock }
-      hash[category.name] = low_stock if low_stock.any?
+    @low_stock_subcategories = SubCategory.includes(:items).each_with_object({}) do |sub_category, hash|
+      # Filter items by company_id
+      items = company_id.present? ? sub_category.items.where(company_id: company_id) : sub_category.items
+
+      grouped_items = items.group_by { |item| item.measurements }
+
+      low_stock_measurements = grouped_items.filter_map do |measurement, items|
+        total_remaining_quantity = items.sum(&:remaining_quantity)
+
+        # Convert all measurements to meters for a common base unit
+        converted_measurement = case measurement.keys.first
+                                when "mm" then measurement.values.first / 1000.0
+                                when "cm" then measurement.values.first / 100.0
+                                else measurement.values.first
+                                end
+
+        if converted_measurement < 50 && total_remaining_quantity < 20
+          { measurement: measurement, total_remaining_quantity: total_remaining_quantity }
+        end
+      end
+
+      hash[sub_category.name] = low_stock_measurements unless low_stock_measurements.empty?
     end
 
     respond_to do |format|
@@ -61,7 +79,46 @@ class DashboardController < ApplicationController
     end
   end
 
+  def update_chart
+    category = Category.find_by(id: params[:category_id])
+    return render json: { error: "Category not found" }, status: :not_found unless category
+
+    sort_by = params[:sort_by]
+
+    sorted_items =
+      case sort_by
+      when "quantity-asc"
+        category.items.order(:remaining_quantity).limit(5)
+      when "quantity-desc"
+        category.items.order(remaining_quantity: :desc).limit(5)
+      when "measurement-asc"
+        category.items.sort_by { |item| extract_measurement_value(item.measurements) }.first(5)
+      when "measurement-desc"
+        category.items.sort_by { |item| -extract_measurement_value(item.measurements) }.first(5)
+      else
+        category.items.order(:remaining_quantity).limit(5)
+      end
+
+    render json: {
+      id: category.id,
+      name: category.name,
+      items: sorted_items.map do |item|
+        {
+          display_name: item.display_name,
+          remaining_quantity: item.remaining_quantity,
+          measurement: item.measurements
+        }
+      end
+    }
+  end
+
   private
+
+  # Extracts measurement value from hash (e.g., {"meters" => 50} → 50)
+  def extract_measurement_value(measurements)
+    return 0 unless measurements.is_a?(Hash) && measurements.values.first.is_a?(Numeric)
+    measurements.values.first
+  end
 
   def set_current_user
     @current_user = current_user

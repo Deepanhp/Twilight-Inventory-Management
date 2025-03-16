@@ -60,7 +60,7 @@
 
                   <!-- Add this right after the subcategory select -->
                   <% if Rails.env.development? %>
-                    <div class="col-sm-12">
+                    <!-- <div class="col-sm-12">
                       <small class="text-muted">
                         Available Categories: <%= Category.pluck(:name).join(', ') %><br>
                         Total Subcategories: <%= SubCategory.count %><br>
@@ -70,7 +70,7 @@
                         <% end %>
                         <div id="debug-log"></div>
                       </small>
-                    </div>
+                    </div> -->
                   <% end %>
 
                   <!-- Dynamic Items Section -->
@@ -262,7 +262,7 @@
                   name="items[][length]" 
                   placeholder="Length" 
                   required>
-                <span class="input-group-addon">meters</span>
+                <span class="col-sm-3 input-group-addon">meters</span>
               </div>
             </div>`;
         }
@@ -275,7 +275,7 @@
                   name="items[][volume]" 
                   placeholder="Volume" 
                   required>
-                <span class="input-group-addon">liters</span>
+                <span class="col-sm-3 input-group-addon">liters</span>
               </div>
             </div>`;
         }
@@ -289,7 +289,7 @@
                 name="items[][quantity]" 
                 placeholder="Quantity" 
                 required>
-              <span class="input-group-addon">pieces</span>
+              <span class="col-sm-3 input-group-addon">pieces</span>
             </div>
           </div>`;
 
