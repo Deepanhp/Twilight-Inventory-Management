@@ -36,8 +36,8 @@
               
                 <div class="box-body">
                   <div class="form-group">
-                    <label>Buyer</label>
-                    <%= f.select(:member, [['Select a Buyer', '']] + Member.all.pluck(:name, :id), {}, { class: 'form-control', id: 'member_select' }) %>
+                    <label>Customer</label>
+                    <%= f.select(:member, [['Select a Customer', '']] + Member.all.pluck(:name, :id), {}, { class: 'form-control', id: 'member_select' }) %>
                   </div>
 
                   <div class="table-responsive">
@@ -109,9 +109,9 @@
               </select>
             </td>
             <td>
-              <select class="form-control subcategory-select">
-                <option value="">Select Subcategory</option>
-              </select>
+              <%= select_tag 'subcategory', 
+                  options_for_select([['Select Subcategory', '']]), 
+                  class: 'form-control subcategory-select' %>
             </td>
             <td>
               <select class="form-control item-select">
@@ -137,6 +137,8 @@
                     <div class="input-group-append" style="width: 30%">
                       <select class="form-control measurement-unit" style="width: 100%; border-left: 0;">
                         <option value="">-</option>
+                        <option value="meters">m</option>
+                        <option value="millimeters">mm</option>
                       </select>
                     </div>
                   </div>
@@ -212,6 +214,7 @@
                 quantityInput.value = '1'; // Set default value to 1 for oils
               } else if (measurementType === 'length' || categoryName.includes('rod') || categoryName.includes('pipe')) {
                 measurementUnit.innerHTML = `
+                  <option value="meters">m</option>
                   <option value="millimeters">mm</option>
                 `;
                 measurementInputContainer.style.display = 'block';
@@ -234,6 +237,12 @@
               fetch(`/api/items/subcategories_by_category?category_id=${this.value}&company_id=${headerCompanySelect.value}`)
                 .then(response => response.json())
                 .then(data => {
+                  // Sort subcategories by name
+                  data.sort((a, b) => a.name.localeCompare(b.name));
+                  
+                  subcategorySelect.innerHTML = '<option value="">Select Subcategory</option>';
+                  subcategoryFilter.innerHTML = '<option value="">All Subcategories</option>';
+                  
                   data.forEach(subcategory => {
                     const option = document.createElement('option');
                     option.value = subcategory.id;
@@ -316,6 +325,7 @@
               quantityInputContainer.style.display = 'block';
               measurementInputContainer.style.display = 'block';
               measurementUnit.innerHTML = `
+                <option value="meters">m</option>
                 <option value="millimeters">mm</option>
               `;
             } else {
@@ -342,6 +352,48 @@
             }
           });
 
+          measurementValue.addEventListener('change', function() {
+            const row = this.closest('tr');
+            const itemSelect = row.querySelector('.item-select');
+            const measurementUnit = row.querySelector('.measurement-unit');
+            const selectedOption = itemSelect.options[itemSelect.selectedIndex];
+            
+            if (!selectedOption.value) return;
+            
+            // Get the original measurement in meters
+            const originalLength = parseFloat(selectedOption.dataset.measurementValue);
+            
+            // Get user input and convert to meters based on selected unit
+            let inputValue = parseFloat(this.value);
+            if (measurementUnit.value === 'millimeters') {
+              inputValue = inputValue / 1000; // Convert mm to m
+            }
+            
+            // Validate against original length
+            if (inputValue > originalLength) {
+              alert(`Cannot cut more than available length (${measurementUnit.value === 'millimeters' ? originalLength * 1000 : originalLength} ${measurementUnit.value})`);
+              this.value = measurementUnit.value === 'millimeters' ? originalLength * 1000 : originalLength;
+            }
+          });
+
+          // Update the measurement value when unit changes
+          measurementUnit.addEventListener('change', function() {
+            const row = this.closest('tr');
+            const measurementValue = row.querySelector('.measurement-value');
+            if (!measurementValue.value) return;
+            
+            let value = parseFloat(measurementValue.value);
+            
+            // Convert between units
+            if (this.value === 'millimeters') {
+              value = value * 1000; // Convert m to mm
+            } else if (this.value === 'meters') {
+              value = value / 1000; // Convert mm to m
+            }
+            
+            measurementValue.value = value;
+          });
+
           removeButton.addEventListener('click', function() {
             if (orderItemsBody.children.length > 1) {
               row.remove();
@@ -358,7 +410,7 @@
         orderButton.addEventListener('click', function() {
           const memberId = document.getElementById('member_select').value;
           if (!memberId) {
-            alert('Please select a buyer');
+            alert('Please select a customer');
             return;
           }
 
@@ -369,13 +421,20 @@
             const itemSelect = row.querySelector('.item-select');
             const quantityInput = row.querySelector('.quantity-input');
             const measurementValue = row.querySelector('.measurement-value');
+            const measurementUnit = row.querySelector('.measurement-unit');
             
             if (itemSelect.value && quantityInput.value && measurementValue.value) {
               hasValidItems = true;
+              // Convert measurement to meters before sending to server
+              let measurement = parseFloat(measurementValue.value);
+              if (measurementUnit.value === 'millimeters') {
+                measurement = measurement / 1000;
+              }
+              
               items.push({
                 item_id: itemSelect.value,
                 requested_quantity: parseInt(quantityInput.value),
-                requested_measurement: parseFloat(measurementValue.value)
+                requested_measurement: measurement
               });
             }
           });
@@ -453,37 +512,6 @@
           }
         `;
         document.head.appendChild(style);
-
-        // Update the measurement value when unit changes
-        $(document).on('change', '.measurement-unit', function() {
-          var row = $(this).closest('tr');
-          var value = row.find('.measurement-value').val();
-          var unit = $(this).val();
-          
-          // Convert the value based on selected unit
-          if (value) {
-            value = parseFloat(value);
-            switch(unit) {
-              case 'millimeters':
-                value = value / 1000; // Convert mm to meters
-                break;
-              case 'centimeters':
-                value = value / 100; // Convert cm to meters
-                break;
-              case 'feet':
-                value = value * 0.3048; // Convert feet to meters
-                break;
-              case 'inches':
-                value = value * 0.0254; // Convert inches to meters
-                break;
-              case 'milliliters':
-                value = value / 1000; // Convert ml to liters
-                break;
-              // meters/liters are base units, no conversion needed
-            }
-            row.find('.measurement-value').attr('data-meters', value);
-          }
-        });
 
         // Add subcategory filter change handler
         document.getElementById('subcategory_filter').addEventListener('change', function() {
