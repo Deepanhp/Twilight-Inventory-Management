@@ -3,8 +3,8 @@ class CreateCategories < ActiveRecord::Migration[7.2]
     create_table :categories do |t|
       t.string :name, null: false
       t.text :description
-      t.measurement :integer
-      t.measurement_types :jsonb
+      t.integer :measurement
+      t.jsonb :measurement_types
 
       t.timestamps
     end
