@@ -14,7 +14,8 @@ set :rbenv_ruby, '3.3.7'
 set :bundle_bins, fetch(:bundle_bins, []).push('bundler')
 set :default_env, {
   'GIT_SSH_COMMAND' => 'ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes',
-  PATH: "/home/deploy/.rbenv/shims:/home/deploy/.rbenv/bin:$PATH"
+  PATH: "/home/deploy/.rbenv/shims:/home/deploy/.rbenv/bin:$PATH",
+  SECRET_KEY_BASE: '84c35f7bc8ce126a8411514625c647c2a5aaab9d251772c2a6ac56ccc90a6a60b3eb58f7f2a57a1b7edef0fdc7a35a46cea0e1eebaddca9ec0ff1172d55663d6'
 }
 set :ssh_options, {
   keys: ['~/.ssh/deploy_key'],
