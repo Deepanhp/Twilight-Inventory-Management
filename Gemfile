@@ -42,6 +42,8 @@ gem 'coffee-rails'
 gem 'uglifier'
 gem 'sass-rails'
 gem 'groupdate'
+gem 'ed25519'
+gem 'bcrypt_pbkdf'
 
 group :development, :test do
   # See https://guides.rubyonrails.org/debugging_rails_applications.html#debugging-with-the-debug-gem
@@ -52,7 +54,11 @@ group :development, :test do
 
   # Omakase Ruby styling [https://github.com/rails/rubocop-rails-omakase/]
   gem "rubocop-rails-omakase", require: false
-  gem 'web-console'
+  gem 'capistrano', require: false
+  gem 'capistrano-rails', require: false
+  gem 'capistrano-passenger', require: false # if using passenger
+  gem 'capistrano3-puma', require: false     # if using puma
+  gem 'capistrano-yarn', require: false
 end
 
 group :development do
