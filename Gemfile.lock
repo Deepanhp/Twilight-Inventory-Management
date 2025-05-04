@@ -384,7 +384,7 @@ PLATFORMS
 
 DEPENDENCIES
   bcrypt_pbkdf
-  bootsnap
+  bootsnap (~> 1.8)
   bootstrap-sass
   brakeman
   capistrano
@@ -403,14 +403,15 @@ DEPENDENCIES
   importmap-rails
   jbuilder
   jquery-rails
-  pg
+  nokogiri (>= 1.14)
+  pg (>= 1.1, < 2.0)
   puma (>= 5.0)
   rails (~> 7.2.2, >= 7.2.2.1)
   rubocop-rails-omakase
   sass-rails
   select2-rails
   selenium-webdriver
-  sprockets-rails
+  sprockets-rails (~> 3.0)
   stimulus-rails
   turbo-rails
   tzinfo-data
