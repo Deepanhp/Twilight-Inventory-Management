@@ -34,6 +34,26 @@ set :puma_error_log, "#{release_path}/log/puma.access.log"
 set :puma_preload_app, true
 set :puma_prune_bundler, true
 
+# Configure Puma to be managed by systemd (optional but recommended)
+# set :puma_systemd, true
+
+# Stop Puma before deploying
+# before 'deploy:starting', 'puma:stop'
+
+# Ensure Puma starts after publishing
+# after 'deploy:publishing', 'puma:start'
+
+namespace :deploy do
+  task :start_foreman do
+    on roles(:app) do
+      within release_path do
+        execute :foreman, "start"
+      end
+    end
+  end
+
+  after 'deploy:publishing', 'deploy:start_foreman'
+end
 
 # Default branch is :master
 # ask :branch, `git rev-parse --abbrev-ref HEAD`.chomp

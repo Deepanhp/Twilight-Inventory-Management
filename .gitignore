@@ -22,3 +22,5 @@ pickle-email-*.html
 .byebug_history
 /config/master.key
 .env*
+
+/config/credentials/production.key

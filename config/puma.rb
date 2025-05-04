@@ -32,3 +32,26 @@ plugin :tmp_restart
 # Specify the PID file. Defaults to tmp/pids/server.pid in development.
 # In other environments, only set the PID file if requested.
 pidfile ENV["PIDFILE"] if ENV["PIDFILE"]
+
+# config/puma.rb
+
+# Shared directories
+shared_path = File.expand_path("../shared", __dir__)
+
+# Number of workers (configured in Capistrano)
+workers ENV.fetch("WEB_CONCURRENCY") { 2 }
+threads ENV.fetch("RAILS_MAX_THREADS") { 5 }
+
+# Preload the application to take advantage of copy-on-write process behavior
+preload_app!
+
+# Bind to a socket for Nginx or other reverse proxy to connect
+bind "unix://#{shared_path}/tmp/sockets/puma.sock"
+
+# Redirect output to log files
+stdout_redirect "#{shared_path}/log/puma.stdout.log", "#{shared_path}/log/puma.stderr.log", true
+
+# Activate the on_worker_boot hook to reconnect to ActiveRecord (if you're using it)
+on_worker_boot do
+  ActiveRecord::Base.establish_connection
+end

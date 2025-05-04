@@ -37,6 +37,7 @@ require 'capistrano/rails'
 require 'capistrano/puma'
 require 'capistrano/bundler'
 require 'capistrano/yarn'
+# require 'capistrano/puma/systemd'
 
 # Load custom tasks from `lib/capistrano/tasks` if you have any defined
 Dir.glob("lib/capistrano/tasks/*.rake").each { |r| import r }

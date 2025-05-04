@@ -48,6 +48,7 @@ gem 'groupdate'
 gem 'ed25519'
 gem 'bcrypt_pbkdf'
 gem 'select2-rails'
+gem 'foreman'
 
 group :development, :test do
   # See https://guides.rubyonrails.org/debugging_rails_applications.html#debugging-with-the-debug-gem
