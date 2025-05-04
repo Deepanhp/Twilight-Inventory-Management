@@ -314,6 +314,7 @@ GEM
       sprockets-rails
       tilt
     securerandom (0.4.1)
+    select2-rails (4.0.13)
     selenium-webdriver (4.28.0)
       base64 (~> 0.2)
       logger (~> 1.4)
@@ -399,6 +400,7 @@ DEPENDENCIES
   rails (~> 7.2.2, >= 7.2.2.1)
   rubocop-rails-omakase
   sass-rails
+  select2-rails
   selenium-webdriver
   sprockets-rails
   sqlite3 (>= 1.4)

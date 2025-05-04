@@ -9,7 +9,7 @@ namespace :db do
     Item.delete_all
     SubCategory.delete_all
     Category.delete_all
-    Member.delete_all  # Add this to clean up members
+    Member.delete_all
     
     puts "Creating members..."
     
@@ -28,62 +28,29 @@ namespace :db do
     
     puts "Creating categories and subcategories..."
     
-    # Sample data for each category and subcategory
-    data = {
-      "Rods" => {
-        measurement_types: ['length'],
-        subcategories: {
-          "Steel" => [
-            { meters: 1000.0, quantity: 10 },
-            { meters: 500.0, quantity: 15 },
-            { meters: 250.0, quantity: 20 }
-          ],
-          "Aluminum" => [
-            { meters: 800.0, quantity: 8 },
-            { meters: 400.0, quantity: 12 },
-            { meters: 200.0, quantity: 16 }
-          ]
-        }
-      },
-      "Pipes" => {
-        measurement_types: ['length'],
-        subcategories: {
-          "PVC" => [
-            { meters: 600.0, quantity: 15 },
-            { meters: 300.0, quantity: 20 },
-            { meters: 150.0, quantity: 25 }
-          ],
-          "Metal" => [
-            { meters: 700.0, quantity: 10 },
-            { meters: 350.0, quantity: 15 },
-            { meters: 175.0, quantity: 20 }
-          ]
-        }
-      },
-      "Barrell Oil" => {
-        measurement_types: ['volume'],
-        subcategories: {
-          "Premium" => [
-            { liters: 200.0, quantity: 5 },
-            { liters: 100.0, quantity: 10 }
-          ],
-          "Standard" => [
-            { liters: 200.0, quantity: 8 },
-            { liters: 100.0, quantity: 15 }
-          ]
-        }
-      }
+    # Sample data structure for categories
+    categories = {
+      'Rod' => [6,8,10,12,16,20,25,28,30,32,35,36,40,45,50,55,60,63,65,70,75,80,85,90,95,100,110,120,125,140,150],
+      'Induction Rod' => [6,8,10,12,16,20,25,28,30,32,35,36,40,45,50,55,60,63,65,70,75,80,85,90,95,100,110,120,125,140,150],
+      'Honning Tube' => ['32*42','40*50','45*55','50*60','55*65','60*72','60*73','63*73','63*75','63*76','70*80','70*82',
+                         '70*85','75*88','75*90','80*90','80*92','80*95','80*100','85*100','90*105','95*110','100*112','100*114',
+                         '100*115','100*120','100*121','100*125','105*120','110*125','110*130','110*135','115*130','115*135',
+                         '115*140','120*140','120*150','120*152','125*140','125*145','125*151','130*155','130*160','135*155',
+                         '135*160','140*160','140*165','140*170','150*170','150*180','160*180','160*185',
+                         '160*190','180*203','180*210','180*220','200*220','200*225','200*230','200*232','200*245','200*250',
+                         '220*273','250*280','250*286','250*300','280*325','300*350']
     }
 
     # Create categories and their subcategories
-    data.each do |category_name, category_data|
+    categories.each do |category_name, sizes|
       puts "Creating category: #{category_name}"
       category = Category.create!(
         name: category_name,
-        measurement_types: category_data[:measurement_types]
+        measurement_types: ['length'] # All categories use length measurement
       )
       
-      category_data[:subcategories].each do |subcategory_name, items|
+      sizes.each do |size|
+        subcategory_name = category_name == 'Honning Tube' ? size.to_s : "#{size} inch dia"
         puts "  Creating subcategory: #{subcategory_name}"
         subcategory = category.sub_categories.create!(name: subcategory_name)
         
@@ -91,23 +58,16 @@ namespace :db do
         Company.all.each do |company|
           puts "    Creating items for company: #{company.name}"
           
-          items.each do |item_data|
-            measurements = if category_name == "Barrell Oil"
-              { 'liters' => item_data[:liters] }
-            else
-              { 'meters' => item_data[:meters] }
-            end
-            
-            Item.create!(
-              company: company,
-              category: category,
-              sub_category: subcategory,
-              name: "#{subcategory_name} #{category_name}",
-              quantity: item_data[:quantity],
-              remaining_quantity: item_data[:quantity],
-              measurements: measurements
-            )
-          end
+          # Create sample quantities for each size
+          Item.create!(
+            company: company,
+            category: category,
+            sub_category: subcategory,
+            name: "#{subcategory_name} #{category_name}",
+            quantity: 100, # Default quantity
+            remaining_quantity: 100,
+            measurements: { 'meters' => 100.0 } # Default length
+          )
         end
       end
     end
@@ -122,6 +82,7 @@ namespace :db do
 
   desc 'Adding subcategory data'
   task add_category_and_sub_catgories: :environment do
+    OrderItem.delete_all
     Order.delete_all
     Item.delete_all
     SubCategory.delete_all
@@ -133,7 +94,7 @@ namespace :db do
                        '70*85','75*88','75*90','80*90','80*92','80*95','80*100','85*100','90*105','95*110','100*112','100*114',
                        '100*115','100*120','100*121','100*125','105*120','110*125','110*130','110*135','115*130','115*135',
                        '115*140','120*140','120*150','120*152','125*140','125*145','125*151','130*155','130*160','135*155',
-                       '135*160','135*155','135*160','140*160','140*165','140*170','150*170','150*180','160*180','160*185',
+                       '135*160','140*160','140*165','140*170','150*170','150*180','160*180','160*185',
                        '160*190','180*203','180*210','180*220','200*220','200*225','200*230','200*232','200*245','200*250',
                        '220*273','250*280','250*286','250*300','280*325','300*350']
     }

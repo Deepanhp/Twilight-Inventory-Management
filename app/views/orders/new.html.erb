@@ -36,8 +36,8 @@
               
                 <div class="box-body">
                   <div class="form-group">
-                    <label>Buyer</label>
-                    <%= f.select(:member, [['Select a Buyer', '']] + Member.all.pluck(:name, :id), {}, { class: 'form-control', id: 'member_select' }) %>
+                    <label>Customer</label>
+                    <%= f.select(:member, [['Select a Customer', '']] + Member.all.pluck(:name, :id), {}, { class: 'form-control', id: 'member_select' }) %>
                   </div>
 
                   <div class="table-responsive">
@@ -109,9 +109,9 @@
               </select>
             </td>
             <td>
-              <select class="form-control subcategory-select">
-                <option value="">Select Subcategory</option>
-              </select>
+              <%= select_tag 'subcategory', 
+                  options_for_select([['Select Subcategory', '']]), 
+                  class: 'form-control subcategory-select' %>
             </td>
             <td>
               <select class="form-control item-select">
@@ -137,6 +137,8 @@
                     <div class="input-group-append" style="width: 30%">
                       <select class="form-control measurement-unit" style="width: 100%; border-left: 0;">
                         <option value="">-</option>
+                        <option value="meters">m</option>
+                        <option value="millimeters">mm</option>
                       </select>
                     </div>
                   </div>
@@ -170,6 +172,8 @@
           categorySelect.addEventListener('change', function() {
             const headerCompanySelect = document.querySelector('#company_id');
             const subcategoryFilter = document.getElementById('subcategory_filter');
+            const quantityInputContainer = row.querySelector('.order-inputs .form-group:first-child');
+            const measurementInputContainer = row.querySelector('.order-inputs .form-group:last-child');
             
             // Reset filter
             subcategoryFilter.innerHTML = '<option value="">All Subcategories</option>';
@@ -192,27 +196,34 @@
             }
             
             // Get the selected category's measurement type
-            const selectedCategory = <%= raw Category.all.to_json(only: [:id, :measurement_types]) %>.find(
+            const selectedCategory = <%= raw Category.all.to_json(only: [:id, :measurement_types, :name]) %>.find(
               c => c.id === parseInt(this.value)
             );
             
-            // Update measurement units based on category type
+            // Update measurement units and display based on category type
             if (selectedCategory) {
               const measurementType = selectedCategory.measurement_types[0];
-              if (measurementType === 'volume') {
+              const categoryName = selectedCategory.name.toLowerCase();
+              
+              if (measurementType === 'volume' || categoryName.includes('oil')) {
                 measurementUnit.innerHTML = `
                   <option value="liters">L</option>
                   <option value="milliliters">ml</option>
                 `;
-              } else if (measurementType === 'length') {
+                measurementInputContainer.style.display = 'none'; // Only hide measurement input
+                quantityInput.value = '1'; // Set default value to 1 for oils
+              } else if (measurementType === 'length' || categoryName.includes('rod') || categoryName.includes('pipe')) {
                 measurementUnit.innerHTML = `
                   <option value="meters">m</option>
-                  <option value="centimeters">cm</option>
                   <option value="millimeters">mm</option>
-                  <option value="feet">ft</option>
-                  <option value="inches">in</option>
                 `;
+                measurementInputContainer.style.display = 'block';
+              } else {
+                measurementInputContainer.style.display = 'block';
               }
+              
+              // Always show quantity input container
+              quantityInputContainer.style.display = 'block';
             }
             
             subcategorySelect.disabled = !this.value;
@@ -226,6 +237,12 @@
               fetch(`/api/items/subcategories_by_category?category_id=${this.value}&company_id=${headerCompanySelect.value}`)
                 .then(response => response.json())
                 .then(data => {
+                  // Sort subcategories by name
+                  data.sort((a, b) => a.name.localeCompare(b.name));
+                  
+                  subcategorySelect.innerHTML = '<option value="">Select Subcategory</option>';
+                  subcategoryFilter.innerHTML = '<option value="">All Subcategories</option>';
+                  
                   data.forEach(subcategory => {
                     const option = document.createElement('option');
                     option.value = subcategory.id;
@@ -272,6 +289,8 @@
 
           itemSelect.addEventListener('change', function() {
             const selectedOption = this.options[this.selectedIndex];
+            const quantityInputContainer = row.querySelector('.order-inputs .form-group:first-child');
+            const measurementInputContainer = row.querySelector('.order-inputs .form-group:last-child');
             
             if (!selectedOption.value) {
               row.querySelector('.available-stock').textContent = '-';
@@ -280,30 +299,99 @@
               row.querySelector('.measurement-value').disabled = true;
               quantityInput.value = '';
               row.querySelector('.measurement-value').value = '';
+              quantityInputContainer.style.display = 'block';
+              measurementInputContainer.style.display = 'block';
               return;
             }
 
             const stock = selectedOption.dataset.stock;
             const measurement = selectedOption.dataset.measurement;
             const measurementValue = selectedOption.dataset.measurementValue;
+            const itemName = selectedOption.textContent.toLowerCase();
             
             row.querySelector('.available-stock').textContent = stock;
             row.querySelector('.measurement').textContent = `${measurementValue} ${measurement}`;
+            
+            // Handle different item types
+            if (itemName.includes('barrel') || itemName.includes('oil')) {
+              quantityInputContainer.style.display = 'block';
+              measurementInputContainer.style.display = 'none'; // Hide only the measurement input
+              quantityInput.value = '1'; // Set default value to 1 for barrel oil
+              measurementUnit.innerHTML = `
+                <option value="liters">L</option>
+                <option value="milliliters">ml</option>
+              `;
+            } else if (itemName.includes('rod') || itemName.includes('pipe')) {
+              quantityInputContainer.style.display = 'block';
+              measurementInputContainer.style.display = 'block';
+              measurementUnit.innerHTML = `
+                <option value="meters">m</option>
+                <option value="millimeters">mm</option>
+              `;
+            } else {
+              quantityInputContainer.style.display = 'block';
+              measurementInputContainer.style.display = 'block';
+            }
             
             quantityInput.disabled = false;
             row.querySelector('.measurement-value').disabled = false;
           });
 
           quantityInput.addEventListener('change', function() {
-            const max = parseFloat(this.max);
-            let value = parseFloat(this.value);
+            const row = this.closest('tr');
+            const itemSelect = row.querySelector('.item-select');
+            const selectedOption = itemSelect.options[itemSelect.selectedIndex];
+            const availableStock = parseInt(selectedOption.dataset.stock);
+            const value = parseInt(this.value);
             
-            if (value > max) {
-              alert(`Cannot order more than available amount (${max} ${measurementUnit.textContent})`);
-              this.value = max;
-            } else if (value < parseFloat(this.min)) {
-              this.value = this.min;
+            if (!value || value < 1) {
+              this.value = 1;
+            } else if (value > availableStock) {
+              alert(`Cannot order more than available stock (${availableStock} pieces)`);
+              this.value = availableStock;
             }
+          });
+
+          measurementValue.addEventListener('change', function() {
+            const row = this.closest('tr');
+            const itemSelect = row.querySelector('.item-select');
+            const measurementUnit = row.querySelector('.measurement-unit');
+            const selectedOption = itemSelect.options[itemSelect.selectedIndex];
+            
+            if (!selectedOption.value) return;
+            
+            // Get the original measurement in meters
+            const originalLength = parseFloat(selectedOption.dataset.measurementValue);
+            
+            // Get user input and convert to meters based on selected unit
+            let inputValue = parseFloat(this.value);
+            if (measurementUnit.value === 'millimeters') {
+              inputValue = inputValue / 1000; // Convert mm to m
+            }
+            
+            // Validate against original length
+            if (inputValue > originalLength) {
+              alert(`Cannot cut more than available length (${measurementUnit.value === 'millimeters' ? originalLength * 1000 : originalLength} ${measurementUnit.value})`);
+              this.value = measurementUnit.value === 'millimeters' ? originalLength * 1000 : originalLength;
+            }
+          });
+
+          // Update the measurement value when unit changes
+          measurementUnit.addEventListener('change', function() {
+            const row = this.closest('tr');
+            const measurementValue = row.querySelector('.measurement-value');
+            if (!measurementValue.value) return;
+            
+            let value = parseFloat(measurementValue.value);
+            
+            // Convert between units
+            if (this.value === 'millimeters') {
+              value = value * 1000; // Convert m to mm
+            } else if (this.value === 'meters') {
+              value = value / 1000; // Convert mm to m
+            }
+            
+            measurementValue.value = value;
           });
 
           removeButton.addEventListener('click', function() {
@@ -322,7 +410,7 @@
         orderButton.addEventListener('click', function() {
           const memberId = document.getElementById('member_select').value;
           if (!memberId) {
-            alert('Please select a buyer');
+            alert('Please select a customer');
             return;
           }
 
@@ -333,13 +421,20 @@
             const itemSelect = row.querySelector('.item-select');
             const quantityInput = row.querySelector('.quantity-input');
             const measurementValue = row.querySelector('.measurement-value');
+            const measurementUnit = row.querySelector('.measurement-unit');
             
             if (itemSelect.value && quantityInput.value && measurementValue.value) {
               hasValidItems = true;
+              // Convert measurement to meters before sending to server
+              let measurement = parseFloat(measurementValue.value);
+              if (measurementUnit.value === 'millimeters') {
+                measurement = measurement / 1000;
+              }
+              
               items.push({
                 item_id: itemSelect.value,
                 requested_quantity: parseInt(quantityInput.value),
-                requested_measurement: parseFloat(measurementValue.value)
+                requested_measurement: measurement
               });
             }
           });
@@ -418,37 +513,6 @@
         `;
         document.head.appendChild(style);
 
-        // Update the measurement value when unit changes
-        $(document).on('change', '.measurement-unit', function() {
-          var row = $(this).closest('tr');
-          var value = row.find('.measurement-value').val();
-          var unit = $(this).val();
-          
-          // Convert the value based on selected unit
-          if (value) {
-            value = parseFloat(value);
-            switch(unit) {
-              case 'millimeters':
-                value = value / 1000; // Convert mm to meters
-                break;
-              case 'centimeters':
-                value = value / 100; // Convert cm to meters
-                break;
-              case 'feet':
-                value = value * 0.3048; // Convert feet to meters
-                break;
-              case 'inches':
-                value = value * 0.0254; // Convert inches to meters
-                break;
-              case 'milliliters':
-                value = value / 1000; // Convert ml to liters
-                break;
-              // meters/liters are base units, no conversion needed
-            }
-            row.find('.measurement-value').attr('data-meters', value);
-          }
-        });
-
         // Add subcategory filter change handler
         document.getElementById('subcategory_filter').addEventListener('change', function() {
           const selectedSubcategory = this.value;
@@ -465,4 +529,5 @@
         });
       });
     </script>
-  </body>
+  </div>
+</body>
