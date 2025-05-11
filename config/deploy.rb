@@ -43,17 +43,36 @@ set :puma_prune_bundler, true
 # Ensure Puma starts after publishing
 # after 'deploy:publishing', 'puma:start'
 
-namespace :deploy do
-  task :start_foreman do
+# namespace :foreman do
+#   desc 'Start application using Foreman without .env'
+#   task :start do
+#     on roles(:app) do
+#       within current_path do
+#         # Pass environment vars inline — replace values accordingly
+#         execute %(RAILS_ENV=production SECRET_KEY_BASE=84c35f7bc8ce126a8411514625c647c2a5aaab9d251772c2a6ac56ccc90a6a60b3eb58f7f2a57a1b7edef0fdc7a35a46cea0e1eebaddca9ec0ff1172d55663d6 foreman start -f Procfile -d #{current_path} &)
+#       end
+#     end
+#   end
+# end
+
+# after 'deploy:published', 'foreman:start'
+
+namespace :app do
+  desc "Start Rails server manually"
+  task :start do
     on roles(:app) do
-      within release_path do
-        execute :foreman, "start"
+      within current_path do
+        # Replace the below command as per your server setup
+        execute "RAILS_ENV=production SECRET_KEY_BASE=84c35f7bc8ce126a8411514625c647c2a5aaab9d251772c2a6ac56ccc90a6a60b3eb58f7f2a57a1b7edef0fdc7a35a46cea0e1eebaddca9ec0ff1172d55663d6 nohup bundle exec rails server -p 3000 -b 0.0.0.0 > log/server.log 2>&1 &"
       end
     end
   end
-
-  after 'deploy:publishing', 'deploy:start_foreman'
 end
+
+after 'deploy:published', 'app:start'
+
+
+
 
 # Default branch is :master
 # ask :branch, `git rev-parse --abbrev-ref HEAD`.chomp

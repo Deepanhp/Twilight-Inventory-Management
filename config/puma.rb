@@ -49,7 +49,8 @@ preload_app!
 bind "unix://#{shared_path}/tmp/sockets/puma.sock"
 
 # Redirect output to log files
-stdout_redirect "#{shared_path}/log/puma.stdout.log", "#{shared_path}/log/puma.stderr.log", true
+# stdout_redirect "#{shared_path}/log/puma.stdout.log", "#{shared_path}/log/puma.stderr.log", true
+stdout_redirect "/home/deploy/my_app/shared/log/puma.stdout.log", "/home/deploy/my_app/shared/log/puma.stderr.log", true
 
 # Activate the on_worker_boot hook to reconnect to ActiveRecord (if you're using it)
 on_worker_boot do
