@@ -31,7 +31,7 @@ gem 'nokogiri', '>= 1.14'
 
 # Reduces boot times through caching; required in config/boot.rb
 # gem "bootsnap", require: false
-gem 'bootsnap', '~> 1.8', require: false
+gem 'bootsnap', '~> 1.18', require: false
 
 # Use Active Storage variants [https://guides.rubyonrails.org/active_storage_overview.html#transforming-images]
 # gem "image_processing", "~> 1.2"
